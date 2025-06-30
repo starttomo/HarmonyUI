@@ -1,6 +1,7 @@
-// pages/Login.ets - 使用 TextInput 组件的登录页面
+// Login.ets
 import router from '@ohos.router';
-
+import preferences from '@ohos.data.preferences';
+import { loginUser } from '../utils/UserData';
 @Entry
 @Component
 struct Login {
@@ -9,6 +10,21 @@ struct Login {
   @State passwordVisible: boolean = false;
   @State isLoading: boolean = false;
   @State errorMessage: string = '';
+
+  // 存储 token 到 Preferences
+  private async setToken(token: string) {
+    try {
+      const context = getContext(this); // Ensure context is obtained correctly
+      const pref = await preferences.getPreferences(context, 'user_token');
+      await pref.put('token', token);
+      await pref.put('username', this.username); // Store username for ProfilePage
+      await pref.flush();
+      console.info('Token 保存成功');
+    } catch (err) {
+      console.error('Token 保存失败:', err);
+      this.errorMessage = '系统错误，请稍后再试';
+    }
+  }
 
   build() {
     Column() {
@@ -38,7 +54,7 @@ struct Login {
         })
           .onChange((value: string) => {
             this.username = value;
-            this.errorMessage = ''; // 清除错误消息
+            this.errorMessage = '';
           })
           .type(InputType.Normal)
           .width('100%')
@@ -61,7 +77,7 @@ struct Login {
         })
           .onChange((value: string) => {
             this.password = value;
-            this.errorMessage = ''; // 清除错误消息
+            this.errorMessage = '';
           })
           .type(this.passwordVisible ? InputType.Normal : InputType.Password)
           .width('100%')
@@ -123,37 +139,39 @@ struct Login {
   }
 
   // 处理登录逻辑
-  handleLogin() {
-    // 简单验证
-    if (!this.username || !this.password) {
-      this.errorMessage = '用户名和密码不能为空';
+  private async handleLogin() {
+    // 验证输入
+    if (!this.username.trim()) {
+      this.errorMessage = '请输入用户名';
       return;
     }
 
-    // 显示加载状态
+    if (!this.password.trim()) {
+      this.errorMessage = '请输入密码';
+      return;
+    }
+
     this.isLoading = true;
+    this.errorMessage = '';
 
-    // 模拟登录请求
-    setTimeout(() => {
-      // 这里应该是实际的登录API调用
-      console.info(`尝试登录，用户名: ${this.username}, 密码: ${this.password}`);
+    try {
+      // 调用登录函数
+      const token = await loginUser(this.username, this.password);
 
-      // 模拟登录成功
-      if (this.username === 'test' && this.password === '123456') {
-        console.info('登录成功');
-        // 登录成功后的操作，例如跳转到主页
-        router.pushUrl({
-          url: 'pages/Main'
-        }).catch((err) => {
-          console.error(`主页跳转失败: ${err.message}`);
-          this.errorMessage = '登录成功，但页面跳转失败';
-        });
+      if (token) {
+        // 存储 token
+        await this.setToken(token);
+
+        // 跳转到 ProfilePage 页面
+        await router.replaceUrl({ url: 'pages/ProfilePage' });
       } else {
-        this.errorMessage = '用户名或密码错误';
+        this.errorMessage = '登录失败，请检查用户名和密码';
       }
-
-      // 重置加载状态
+    } catch (err) {
+      console.error('登录错误:', err);
+      this.errorMessage = '登录失败，请稍后再试';
+    } finally {
       this.isLoading = false;
-    }, 1500);
+    }
   }
 }

@@ -1,5 +1,6 @@
-// pages/Register.ets
+// Register.ets
 import router from '@ohos.router';
+import { registerUser } from '../utils/UserData';
 
 @Entry
 @Component
@@ -10,10 +11,19 @@ struct Register {
   @State showSuccess: boolean = false;
   @State passwordVisible: boolean = false;
   @State confirmPasswordVisible: boolean = false;
+  @State errorMessage: string = '';
 
   build() {
     Column() {
       if (!this.showSuccess) {
+        // 错误消息提示
+        if (this.errorMessage) {
+          Text(this.errorMessage)
+            .fontSize(14)
+            .fontColor('#FF0000')
+            .margin({ bottom: 20 })
+        }
+
         // 注册表单
         Column() {
           // 用户名输入
@@ -22,12 +32,15 @@ struct Register {
               .fontSize(18)
               .margin({ bottom: 5 })
 
-            TextInput({ placeholder: '请输入用户名' })
-              //.text(this.username)
-              .type(InputType.Normal)
+            TextInput({
+              text: this.username,
+              placeholder: '请输入用户名'
+            })
               .onChange((value: string) => {
                 this.username = value;
+                this.errorMessage = '';
               })
+              .type(InputType.Normal)
               .width('100%')
               .height(50)
               .backgroundColor('#F5F5F5')
@@ -42,12 +55,15 @@ struct Register {
               .fontSize(18)
               .margin({ bottom: 5 })
 
-            TextInput({ placeholder: '请输入密码' })
-              //.text(this.password)
-              .type(this.passwordVisible ? InputType.Normal : InputType.Password)
+            TextInput({
+              text: this.password,
+              placeholder: '请输入密码'
+            })
               .onChange((value: string) => {
                 this.password = value;
+                this.errorMessage = '';
               })
+              .type(this.passwordVisible ? InputType.Normal : InputType.Password)
               .width('100%')
               .height(50)
               .backgroundColor('#F5F5F5')
@@ -78,12 +94,15 @@ struct Register {
               .fontSize(18)
               .margin({ bottom: 5 })
 
-            TextInput({ placeholder: '请确认密码' })
-              //.text(this.confirmPassword)
-              .type(this.confirmPasswordVisible ? InputType.Normal : InputType.Password)
+            TextInput({
+              text: this.confirmPassword,
+              placeholder: '请确认密码'
+            })
               .onChange((value: string) => {
                 this.confirmPassword = value;
+                this.errorMessage = '';
               })
+              .type(this.confirmPasswordVisible ? InputType.Normal : InputType.Password)
               .width('100%')
               .height(50)
               .backgroundColor('#F5F5F5')
@@ -110,19 +129,30 @@ struct Register {
 
           // 注册按钮
           Button('注册', { type: ButtonType.Capsule })
-            .onClick(() => {
-              if (!this.username || !this.password || !this.confirmPassword) {
-                console.error('请填写完整信息');
+            .onClick(async () => {
+              if (!this.username.trim() || !this.password.trim() || !this.confirmPassword.trim()) {
+                this.errorMessage = '请填写完整信息';
                 return;
               }
 
               if (this.password !== this.confirmPassword) {
-                console.error('两次输入的密码不一致');
+                this.errorMessage = '两次输入的密码不一致';
                 return;
               }
 
-              // 模拟注册成功
-              this.showSuccess = true;
+              try {
+                // 调用注册函数
+                const isRegistered = registerUser(this.username, this.password);
+                if (isRegistered) {
+                  // 注册成功
+                  this.showSuccess = true;
+                } else {
+                  this.errorMessage = '用户已存在，请选择其他用户名';
+                }
+              } catch (err) {
+                console.error('注册错误:', err);
+                this.errorMessage = '注册失败，请稍后再试';
+              }
             })
             .width(150)
             .height(50)

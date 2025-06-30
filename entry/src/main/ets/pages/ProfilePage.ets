@@ -1,5 +1,8 @@
+// Profile.ets
 import router from '@ohos.router';
 import prompt from '@system.prompt';
+import preferences from '@ohos.data.preferences';
+import { verifyToken } from '../utils/UserData';
 import { BottomTabs } from '../components/BottomTabs';
 
 @Entry
@@ -36,17 +39,44 @@ struct Profile {
     time: string
   }> = [];
 
-  aboutToAppear() {
-    // 从路由参数获取信息
-    const params = router.getParams() as Record<string, string>;
-    if (params && params['username']) {
-      this.username = params['username'];
-      this.isLoggedIn = true;
+  async aboutToAppear() {
+    try {
+      // Load token and username from preferences
+      const context = getContext(this);
+      const pref = await preferences.getPreferences(context, 'user_token');
+      const tokenValue = await pref.get('token', '');
+      const usernameValue = await pref.get('username', '');
+
+      // Ensure token and username are strings
+      const token = typeof tokenValue === 'string' ? tokenValue : '';
+      const storedUsername = typeof usernameValue === 'string' ? usernameValue : '';
+
+      if (token && storedUsername && verifyToken(storedUsername, token)) {
+        this.username = storedUsername;
+        this.isLoggedIn = true;
+      } else {
+        this.isLoggedIn = false;
+        // Check if already on Login page to avoid redirect loop
+        //const currentRoute = router.getState()?.name;
+        // if (currentRoute !== 'Login') {
+        //   await router.replaceUrl({ url: 'pages/Login' });
+        //   prompt.showToast({ message: '请先登录' });
+        // }
+      }
+
+      // Load mock data (unchanged)
+      this.loadMockData();
+    } catch (err) {
+      console.error('加载用户信息失败:', err);
+      this.isLoggedIn = false;
+      const currentRoute = router.getState()?.name;
+      if (currentRoute !== 'Login') {
+        await router.replaceUrl({ url: 'pages/Login' });
+        prompt.showToast({ message: '加载用户信息失败，请重新登录' });
+      }
     }
-    // 加载数据...
-    this.loadMockData();
   }
- 
+
   loadMockData() {
     this.browseHistory = [
       { id: 1, name: '当归', views: 120, time: '2023-10-15 14:30' },
@@ -87,6 +117,29 @@ struct Profile {
               Text(this.username)
                 .fontSize(20)
                 .fontWeight(FontWeight.Bold)
+                .margin({ bottom: 10 })
+
+              // 退出登录按钮
+              Button('退出登录', { type: ButtonType.Capsule })
+                .onClick(async () => {
+                  try {
+                    // Clear preferences
+                    const context = getContext(this);
+                    const pref = await preferences.getPreferences(context, 'user_token');
+                    await pref.clear();
+                    await pref.flush();
+                    this.isLoggedIn = false;
+                    this.username = '';
+                    // Redirect to Login page
+                    await router.replaceUrl({ url: 'pages/Login' });
+                    prompt.showToast({ message: '已退出登录' });
+                  } catch (err) {
+                    console.error('退出登录失败:', err);
+                    prompt.showToast({ message: '退出登录失败，请稍后再试' });
+                  }
+                })
+                .width(120)
+                .height(40)
             } else {
               Button('点击登录', { type: ButtonType.Capsule })
                 .onClick(() => {
@@ -94,7 +147,7 @@ struct Profile {
                     url: 'pages/Login',
                     params: { from: 'profile' }
                   }).then(() => {
-                    // 登录成功后返回会触发aboutToAppear
+                    // 登录成功后返回 will trigger aboutToAppear
                   }).catch(err => {
                     prompt.showToast({ message: '跳转登录页面失败' });
                   });
