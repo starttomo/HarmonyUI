@@ -3,6 +3,7 @@ import prompt from '@system.prompt';
 import { CommonConstants } from '../constants/CommonConstants';
 import { BackendService } from '../services/BackendService';
 import media from '@ohos.multimedia.media';
+import { BottomTabs } from '../components/BottomTabs';
 
 
 
@@ -257,28 +258,7 @@ struct HomePage {
       .width('100%')
 
       // 底部导航栏
-      Tabs({ barPosition: BarPosition.End }) {
-        TabContent() {
-        }.tabBar({ icon: $r('app.media.home'), text: '首页' })
-
-        TabContent() {
-        }.tabBar({ icon: $r('app.media.video'), text: '视频' })
-
-        TabContent() {
-        }.tabBar({ icon: $r('app.media.learn'), text: '学习' })
-
-        TabContent() {
-        }.tabBar({ icon: $r('app.media.user'), text: '个人' })
-      }
-      .barMode(BarMode.Fixed)
-      .width('100%')
-      .height(60)
-      .onChange((index: number) => {
-        if (index !== 0) {
-          router.pushUrl({ url: NAV_ITEMS[index].route });
-        }
-        this.selectedIndex = index;
-      })
+      BottomTabs()
     }
     .width('100%')
     .height('100%')

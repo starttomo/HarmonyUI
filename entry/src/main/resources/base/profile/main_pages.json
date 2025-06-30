@@ -6,6 +6,7 @@
     "pages/DetailPage",
     "pages/ProfilePage",
     "pages/StudyPage",
-    "pages/VideoPage"
+    "pages/VideoPage",
+    "pages/BrowseHistory"
   ]
 }
