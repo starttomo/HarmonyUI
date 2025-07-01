@@ -8,6 +8,21 @@
       "phone",
       "tablet"
     ],
+//    "abilities": [
+//      {
+//        "permissions": [
+//          "ohos.permission.MEDIA_LOCATION"
+//        ],
+//      }
+//      ],
+    "requestPermissions": [
+      {
+        "name": "ohos.permission.READ_MEDIA"
+      },
+      {
+        "name": "ohos.permission.INTERNET"
+      }
+    ],
     "deliveryWithInstall": true,
     "installationFree": false,
     "pages": "$profile:main_pages",

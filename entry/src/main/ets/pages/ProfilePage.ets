@@ -4,13 +4,13 @@ import prompt from '@system.prompt';
 import preferences from '@ohos.data.preferences';
 import { verifyToken } from '../utils/UserData';
 import { BottomTabs } from '../components/BottomTabs';
-
+import image from '@ohos.multimedia.image';
 @Entry
 @Component
 struct Profile {
   @State isLoggedIn: boolean = false;
   @State username: string = '';
-  @State avatar: string = '../imgs/1.jpg';
+  //@State avatar: string = '../imgs/user.png';
   @State browseHistory: Array<{
     id: number,
     name: string,
@@ -56,12 +56,6 @@ struct Profile {
         this.isLoggedIn = true;
       } else {
         this.isLoggedIn = false;
-        // Check if already on Login page to avoid redirect loop
-        //const currentRoute = router.getState()?.name;
-        // if (currentRoute !== 'Login') {
-        //   await router.replaceUrl({ url: 'pages/Login' });
-        //   prompt.showToast({ message: '请先登录' });
-        // }
       }
 
       // Load mock data (unchanged)
@@ -107,9 +101,9 @@ struct Profile {
         Column() {
           // 用户头像区域
           Column() {
-            Image(this.avatar)
-              .width(100)
-              .height(100)
+            Image($r("app.media.user"))
+              .width(150)
+              .height(150)
               .borderRadius(50)
               .margin({ bottom: 10 })
 
@@ -217,7 +211,7 @@ struct Profile {
                     .fontSize(16)
                     .layoutWeight(1)
 
-                  Image(item.expanded ? 'common/icons/arrow_up.png' : 'common/icons/arrow_down.png')
+                  Image(item.expanded ? $r("app.media.congbai") :$r("app.media.3") )
                     .width(20)
                     .height(20)
                 }
