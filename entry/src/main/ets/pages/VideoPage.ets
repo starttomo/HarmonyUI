@@ -3,12 +3,12 @@ import promptAction from '@ohos.promptAction';
 import { CommonConstants } from '../constants/CommonConstants';
 import { BottomTabs } from '../components/BottomTabs';
 
-// Simulated video data
+// 模拟视频数据
 export const VIDEO_LIST = [
   {
     id: 1,
     thumbnail: CommonConstants.IMAGE_URL_1,
-    videoUrl: $rawfile('videox.mp4'), // Use $rawfile for local video
+    videoUrl: $rawfile('videox.mp4'), // 使用本地视频文件
     title: '人参药效视频',
     description: '了解人参的药效与使用方法',
     likes: 120,
@@ -18,8 +18,7 @@ export const VIDEO_LIST = [
   {
     id: 2,
     thumbnail: CommonConstants.IMAGE_URL_2,
-    //videoUrl: $rawfile('videox.mp4'), // Corrected path
-    videoUrl:'resources://rawfile/videox.mp4',
+    videoUrl: 'resources://rawfile/videox.mp4',
     title: '枸杞养生视频',
     description: '枸杞的养生功效与食用技巧',
     likes: 80,
@@ -41,11 +40,11 @@ export const VIDEO_LIST = [
 @Entry
 @Component
 struct VideoPage {
-  @State currentVideoIndex: number = 0;
-  @State videoList: Array<any> = VIDEO_LIST;
-  @State commentVisibility: { [key: number]: boolean } = {};
+  @State currentVideoIndex: number = 0; // 当前滑动器视频索引
+  @State videoList: Array<any> = VIDEO_LIST; // 视频列表
+  @State commentVisibility: { [key: number]: boolean } = {}; // 控制评论区域显示
 
-  // Play video
+  // 播放视频
   private playVideo(videoUrl: string) {
     console.info('尝试播放视频:', videoUrl);
     router.pushUrl({
@@ -60,17 +59,23 @@ struct VideoPage {
     });
   }
 
-  // Toggle like
+  // 切换点赞状态
   private toggleLike(item: any) {
+    // 修改点赞状态和点赞数
     item.likes = item.liked ? item.likes - 1 : item.likes + 1;
     item.liked = !item.liked;
+
+    // 深拷贝 videoList 以触发 UI 更新
+    this.videoList = [...this.videoList];
+
+    // 显示提示信息
     promptAction.showToast({
       message: item.liked ? '点赞成功' : '取消点赞',
       duration: 2000
     });
   }
 
-  // Open comment input page
+  // 打开评论输入页面
   private openCommentDialog(itemId: number) {
     router.pushUrl({
       url: 'pages/CommentInputPage',
@@ -84,14 +89,14 @@ struct VideoPage {
     });
   }
 
-  // Toggle comment visibility
+  // 切换评论区域显示
   private toggleCommentVisibility(itemId: number) {
     this.commentVisibility[itemId] = !this.commentVisibility[itemId];
   }
 
   build() {
     Column() {
-      // Title
+      // 标题
       Text('中草药视频学习')
         .fontSize(20)
         .fontWeight(FontWeight.Bold)
@@ -99,7 +104,7 @@ struct VideoPage {
         .textAlign(TextAlign.Start)
         .margin({ left: 10, top: 10, bottom: 10 })
 
-      // Horizontal video swiper
+      // 水平视频滑动器
       Swiper() {
         ForEach(this.videoList, (item) => {
           Column() {
@@ -122,7 +127,7 @@ struct VideoPage {
         this.currentVideoIndex = index;
       })
 
-      // Video description
+      // 视频描述
       Text(this.videoList[this.currentVideoIndex]?.description || '请选择一个视频')
         .fontSize(14)
         .width('100%')
@@ -130,14 +135,14 @@ struct VideoPage {
         .margin({ top: 10, bottom: 10 })
         .fontColor('#666666')
 
-      // Vertical video list
+      // 垂直视频列表
       Scroll() {
         Column() {
           ForEach(this.videoList, (item) => {
             Column() {
-              // Video item
+              // 视频项
               Row() {
-                // Thumbnail
+                // 缩略图
                 Image(item.thumbnail)
                   .width(100)
                   .height(100)
@@ -146,7 +151,7 @@ struct VideoPage {
                   .margin({ right: 10 })
                   .onClick(() => this.playVideo(item.videoUrl))
 
-                // Content
+                // 内容
                 Column() {
                   Text(item.title)
                     .fontSize(16)
@@ -158,7 +163,7 @@ struct VideoPage {
                   Column() {
                     Button() {
                       Text(item.liked ? '取消' : '点赞')
-                        .fontSize(12)
+                        .fontSize(12) // 修复 Gavin 错误，设置为 12
                     }
                     .width(60)
                     .height(30)
@@ -180,6 +185,8 @@ struct VideoPage {
                 .width('50%')
                 .height(100)
                 .justifyContent(FlexAlign.Start)
+
+                // 点赞数显示
                 Text(`${item.likes} 点赞`)
                   .fontSize(12)
                   .margin({ top: 8 })
@@ -189,7 +196,7 @@ struct VideoPage {
               .backgroundColor('#F5F5F5')
               .borderRadius(12)
 
-              // Comment section
+              // 评论区域
               Column() {
                 Row() {
                   Text(this.commentVisibility[item.id] ? '隐藏评论' : '显示评论')
@@ -244,6 +251,7 @@ struct VideoPage {
       .flexGrow(1)
       .width('100%')
 
+      // 底部导航
       BottomTabs();
     }
     .width('100%')
