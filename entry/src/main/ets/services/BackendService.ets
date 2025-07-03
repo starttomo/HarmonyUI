@@ -1,17 +1,104 @@
+import http from '@ohos.net.http';
+
 export class BackendService {
-  static async toggleLike(id: number, liked: boolean): Promise<void> {
-    // 模拟后端请求
-    console.log(`Toggle like for content ${id}: ${liked}`);
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(), 500); // 模拟网络延迟
+
+
+  static fetchHerbList(searchText: string = '', category: string = 'all'): Promise<any[]> {
+    return new Promise((resolve, reject) => {
+      let url = `http://192.168.223.223:8081/api/herbs?search=${encodeURIComponent(searchText)}&category=${encodeURIComponent(category)}`;
+      let httpRequest = http.createHttp();
+      httpRequest.request(
+        url,
+        {
+          method: http.RequestMethod.GET,
+          header: { 'Content-Type': 'application/json' }
+        },
+        (err, data) => {
+          httpRequest.destroy();
+          if (err) {
+            reject(err);
+          } else {
+            try {
+              resolve(JSON.parse(data.result.toString()));
+            } catch (e) {
+              reject(e);
+            }
+          }
+        }
+      );
     });
   }
 
-  static async toggleCollect(id: number, collected: boolean): Promise<void> {
-    // 模拟后端请求
-    console.log(`Toggle collect for content ${id}: ${collected}`);
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(), 500); // 模拟网络延迟
+  static fetchHerbDetail(id: number): Promise<any> {
+    return new Promise((resolve, reject) => {
+      let url = `http://192.168.223.223:8081/api/herbs/${id}`;
+      let httpRequest = http.createHttp();
+      httpRequest.request(
+        url,
+        {
+          method: http.RequestMethod.GET,
+          header: { 'Content-Type': 'application/json' }
+        },
+        (err, data) => {
+          httpRequest.destroy();
+          if (err) {
+            reject(err);
+          } else {
+            try {
+              resolve(JSON.parse(data.result.toString()));
+            } catch (e) {
+              reject(e);
+            }
+          }
+        }
+      );
     });
   }
+
+  static toggleLike(id: number, like: boolean): Promise<void> {
+    return new Promise((resolve, reject) => {
+      let url = `http://192.168.223.223:8081/api/herbs/${id}/like`;
+      let httpRequest = http.createHttp();
+      httpRequest.request(
+        url,
+        {
+          method: http.RequestMethod.POST,
+          header: { 'Content-Type': 'application/json' },
+          extraData: JSON.stringify({ like })
+        },
+        (err, data) => {
+          httpRequest.destroy();
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        }
+      );
+    });
+  }
+
+  static toggleCollect(id: number, collect: boolean): Promise<void> {
+    return new Promise((resolve, reject) => {
+      let url = `http://192.168.223.223:8081/api/herbs/${id}/collect`;
+      let httpRequest = http.createHttp();
+      httpRequest.request(
+        url,
+        {
+          method: http.RequestMethod.POST,
+          header: { 'Content-Type': 'application/json' },
+          extraData: JSON.stringify({ collect })
+        },
+        (err, data) => {
+          httpRequest.destroy();
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        }
+      );
+    });
+  }
+
 }

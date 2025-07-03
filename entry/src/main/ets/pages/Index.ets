@@ -5,17 +5,6 @@ import { BackendService } from '../services/BackendService';
 import media from '@ohos.multimedia.media';
 import { BottomTabs } from '../components/BottomTabs';
 
-// 模拟数据，新增类别字段
-const CONTENT_LIST = [
-  { id: 1, image: CommonConstants.IMAGE_URL_1, title: '人参', description: '补气养血', views: 100, liked: false, collected: false, category: '根茎类' },
-  { id: 2, image: CommonConstants.IMAGE_URL_2, title: '枸杞', description: '滋补肝肾', views: 150, liked: false, collected: false, category: '果实类' },
-  { id: 3, image: CommonConstants.IMAGE_URL_3, title: '当归', description: '补血活血', views: 200, liked: false, collected: false, category: '根茎类' },
-  { id: 4, image: CommonConstants.IMAGE_URL_1, title: '黄芪', description: '益气固表', views: 100, liked: false, collected: false, category: '根茎类' },
-  { id: 5, image: CommonConstants.IMAGE_URL_2, title: '山楂', description: '健脾消食', views: 150, liked: false, collected: false, category: '果实类' },
-  { id: 6, image: CommonConstants.IMAGE_URL_3, title: '甘草', description: '调和诸药', views: 200, liked: false, collected: false, category: '根茎类' },
-  { id: 7, image: CommonConstants.IMAGE_URL_4, title: '菊花', description: '清热解毒', views: 250, liked: false, collected: false, category: '花类' },
-];
-
 // 类别数据
 const CATEGORIES = [
   { name: '全部', value: 'all' },
@@ -36,83 +25,41 @@ const NAV_ITEMS = [
 @Entry
 @Component
 struct HomePage {
-  @State selectedIndex: number = 0; // 当前选中的导航项
-  @State contentList: Array<any> = CONTENT_LIST; // 内容列表
-  @State filteredList: Array<any> = CONTENT_LIST; // 过滤后的列表
-  @State isLoading: boolean = false; // 加载状态
-  @State hasMore: boolean = true; // 是否还有更多数据
-  @State searchText: string = ''; // 搜索文本
-  @State selectedCategory: string = 'all'; // 当前选中的类别
+  @State selectedIndex: number = 0;
+  @State contentList: Array<any> = [];
+  @State filteredList: Array<any> = [];
+  @State isLoading: boolean = false;
+  @State hasMore: boolean = true;
+  @State searchText: string = '';
+  @State selectedCategory: string = 'all';
 
-  // 生成新数据的方法
-  private generateNewItems(): Array<any> {
-    const newItems = [];
-    const startId = this.contentList.length + 1;
-    const categories = ['根茎类', '果实类', '花类', '叶类'];
-    for (let i = 0; i < 4; i++) {
-      newItems.push({
-        id: startId + i,
-        image: CommonConstants[`IMAGE_URL_${(startId + i) % 4 + 1}`],
-        title: `新中药${startId + i}`,
-        description: `这是新中药${startId + i}的描述`,
-        views: Math.floor(Math.random() * 200) + 100,
-        liked: false,
-        collected: false,
-        category: categories[Math.floor(Math.random() * categories.length)],
-      });
-    }
-    return newItems;
+  aboutToAppear() {
+    this.fetchData();
   }
 
-  // 搜索过滤
-  private filterContent() {
-    let result = this.contentList;
-    // 按名称搜索
-    if (this.searchText) {
-      result = result.filter(item => item.title.includes(this.searchText));
+  private async fetchData() {
+    this.isLoading = true;
+    try {
+      const data = await BackendService.fetchHerbList(this.searchText, this.selectedCategory);
+      this.contentList = data;
+      this.filteredList = data;
+      this.hasMore = data.length >= 100;
+    } catch (e) {
+      prompt.showToast({ message: '数据加载失败' });
     }
-    // 按类别过滤
-    if (this.selectedCategory !== 'all') {
-      result = result.filter(item => item.category === this.selectedCategory);
-    }
-    this.filteredList = result;
+    this.isLoading = false;
   }
 
-  // 搜索输入变化
   private onSearchChange(value: string) {
     this.searchText = value;
-    this.filterContent();
+    this.fetchData();
   }
 
-  // 类别选择变化
   private onCategoryChange(value: string) {
     this.selectedCategory = value;
-    this.filterContent();
+    this.fetchData();
   }
 
-  // 点赞操作
-  private async toggleLike(item: any) {
-    item.liked = !item.liked;
-    try {
-      await BackendService.toggleLike(item.id, item.liked);
-      prompt.showToast({ message: item.liked ? '点赞成功' : '取消点赞' });
-    } catch (error) {
-      prompt.showToast({ message: '点赞失败，请重试' });
-    }
-  }
-
-  // 收藏操作
-  private async toggleCollect(item: any) {
-    item.collected = !item.collected;
-    try {
-      await BackendService.toggleCollect(item.id, item.collected);
-      prompt.showToast({ message: item.collected ? '收藏成功' : '取消收藏' });
-    } catch (error) {
-      prompt.showToast({ message: '收藏失败，请重试' });
-    }
-  }
-
-  // 跳转到详情页
   private navigateToDetail(id: number) {
     router.pushUrl({
       url: 'pages/DetailPage',
@@ -120,26 +67,16 @@ struct HomePage {
     });
   }
 
-  // 加载更多数据
-  private loadMoreData() {
-    if (this.isLoading || !this.hasMore) return;
+  private toggleLike(item: any) {
+    prompt.showToast({ message: '点赞功能暂未实现' });
+  }
 
-    this.isLoading = true;
-    setTimeout(() => {
-      const newItems = this.generateNewItems();
-      this.contentList = [...this.contentList, ...newItems];
-      this.filterContent(); // 更新过滤后的列表
-      this.isLoading = false;
-
-      if (this.contentList.length >= 20) {
-        this.hasMore = false;
-      }
-    }, 1000);
+  private toggleCollect(item: any) {
+    prompt.showToast({ message: '收藏功能暂未实现' });
   }
 
   build() {
     Column() {
-      // 搜索栏
       // 搜索栏
       Row() {
         TextInput({ placeholder: '搜索中药材名称', text: this.searchText })
@@ -153,7 +90,7 @@ struct HomePage {
         }
         .width('20%')
         .height(40)
-        .onClick(() => this.filterContent())
+        .onClick(() => this.fetchData())
       }
       .width('100%')
       .padding(10)
@@ -213,7 +150,7 @@ struct HomePage {
           } else {
             ForEach(this.filteredList, (item, index) => {
               Row() {
-                Image(item.image)
+                Image(item.image_url)
                   .width(100)
                   .height(100)
                   .objectFit(ImageFit.Cover)
@@ -222,19 +159,19 @@ struct HomePage {
 
                 Column() {
                   Column() {
-                    Text(item.title)
+                    Text(item.herb_name)
                       .fontSize(16)
                       .fontWeight(FontWeight.Bold)
                       .textAlign(TextAlign.Start)
                       .width('100%')
                       .margin({ bottom: 4 })
-                    Text(item.description)
+                    Text(item.property ? item.property + (item.efficacy ? '，' + item.efficacy : '') : (item.alias || ''))
                       .fontSize(12)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
                       .maxLines(2)
                       .textAlign(TextAlign.Start)
                       .width('100%')
-                    Text(`类别: ${item.category}`)
+                    Text(`类别: ${item.category_name || ''}`)
                       .fontSize(10)
                       .fontColor('#666666')
                       .margin({ top: 4 })
@@ -288,14 +225,14 @@ struct HomePage {
                 .fontSize(12)
                 .backgroundColor('#FF9999')
                 .borderRadius(8)
-                .onClick(() => this.navigateToDetail(item.id))
+                .onClick(() => this.navigateToDetail(item.herb_id))
               }
               .width('100%')
               .height(120)
               .padding(10)
               .backgroundColor('#F5F5F5')
               .borderRadius(12)
-            }, item => item.id.toString())
+            }, item => item.herb_id.toString())
           }
 
           if (this.isLoading) {
@@ -322,7 +259,7 @@ struct HomePage {
       }
       .onScrollEdge((edge: number) => {
         if (edge === 1) {
-          this.loadMoreData();
+          this.fetchData();
         }
       })
       .layoutWeight(1)

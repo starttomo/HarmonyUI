@@ -1,96 +1,23 @@
 import router from '@ohos.router';
 import { CommonConstants } from '../constants/CommonConstants';
 import { BottomTabs } from '../components/BottomTabs';
-
-// 模拟中药材数据
-export const HERB_LIST = [
-  {
-    herb_id: 1,
-    herb_name: '人参',
-    category_id: 1,
-    pinyin: 'Ren Shen',
-    alias: '人葠,黄参',
-    property: '甘、微苦，温',
-    meridian: '归脾、肺、心经',
-    efficacy: '大补元气，复脉固脱，补脾益肺，生津安神',
-    indications: '体虚欲脱，肢冷脉微，脾虚食少，肺虚喘咳，津伤口渴，内热消渴，气血亏虚，神疲心悸，失眠健忘',
-    usage: '煎服：3-9g；或入丸、散。研末吞服，每次1-2g',
-    contraindication: '实证、热证忌服；不宜与藜芦同用',
-    production_area: '吉林、辽宁、黑龙江',
-    views: 1000,
-    likes: 120,
-    collections: 50,
-    image: CommonConstants.IMAGE_URL_1
-  },
-  {
-    herb_id: 2,
-    herb_name: '枸杞',
-    category_id: 2,
-    pinyin: 'Gou Qi',
-    alias: '杞子,红杞',
-    property: '甘，平',
-    meridian: '归肝、肾经',
-    efficacy: '滋补肝肾，益精明目',
-    indications: '肝肾阴亏，腰膝酸软，头晕目眩，目昏多泪，虚劳咳嗽，消渴',
-    usage: '煎服：6-12g；或入丸、散、膏、酒剂',
-    contraindication: '外感热病、正盛者不宜服用',
-    production_area: '宁夏、甘肃、青海',
-    views: 800,
-    likes: 80,
-    collections: 30,
-    image: CommonConstants.IMAGE_URL_2
-  },
-  {
-    herb_id: 3,
-    herb_name: '当归',
-    category_id: 3,
-    pinyin: 'Dang Gui',
-    alias: '秦归,西归',
-    property: '甘、辛，温',
-    meridian: '归肝、心、脾经',
-    efficacy: '补血活血，调经止痛，润肠通便',
-    indications: '血虚诸证，月经不调，痛经，经闭，虚寒腹痛，跌打损伤，风湿痹痛，肠燥便秘',
-    usage: '煎服：6-12g；或入丸、散',
-    contraindication: '湿阻中满及大便溏泄者慎用',
-    production_area: '甘肃、四川、云南',
-    views: 1200,
-    likes: 150,
-    collections: 70,
-    image: CommonConstants.IMAGE_URL_3
-  }
-];
+import { BackendService } from '../services/BackendService';
 
 @Entry
 @Component
 struct DetailPage {
   @State herbData: any = null; // 当前中药材数据
 
-  // 页面加载时获取路由参数并查找数据
-  aboutToAppear() {
-    // 使用 router.getParams() 获取参数
+  async aboutToAppear() {
     const params = router.getParams() as { contentId?: number };
     const contentId = params?.contentId;
-    console.info('接收到的 contentId:', contentId);
-
-    // 查找对应的中药材数据
-    this.herbData = HERB_LIST.find(item => item.herb_id === contentId) || {
-      herb_id: 0,
-      herb_name: '未知',
-      category_id: 0,
-      pinyin: '',
-      alias: '',
-      property: '',
-      meridian: '',
-      efficacy: '',
-      indications: '',
-      usage: '',
-      contraindication: '',
-      production_area: '',
-      views: 0,
-      likes: 0,
-      collections: 0,
-      image: CommonConstants.IMAGE_URL_1 // 默认图片
-    };
+    if (contentId) {
+      try {
+        this.herbData = await BackendService.fetchHerbDetail(contentId);
+      } catch (e) {
+        // 错误处理
+      }
+    }
   }
 
   // 返回上一页
@@ -126,7 +53,7 @@ struct DetailPage {
         .margin({ left: 10, top: 10, bottom: 10 })
 
       // 图片
-      Image(this.herbData?.image || CommonConstants.IMAGE_URL_1)
+      Image(this.herbData?.image_url || CommonConstants.IMAGE_URL_1)
         .width('100%')
         .height(200)
         .objectFit(ImageFit.Cover)
