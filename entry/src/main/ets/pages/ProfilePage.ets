@@ -51,15 +51,20 @@ struct Profile {
       const token = typeof tokenValue === 'string' ? tokenValue : '';
       const storedUsername = typeof usernameValue === 'string' ? usernameValue : '';
 
-      if (token && storedUsername && verifyToken(storedUsername, token)) {
+      if (token && storedUsername) {
         this.username = storedUsername;
         this.isLoggedIn = true;
+        // 登录成功后清空数据
+        this.browseHistory = [];
+        this.likedHerbs = [];
+        this.collectedHerbs = [];
+        this.commentedHerbs = [];
       } else {
         this.isLoggedIn = false;
+        this.username = '';
+        // 未登录时加载模拟数据
+        this.loadMockData();
       }
-
-      // Load mock data (unchanged)
-      this.loadMockData();
     } catch (err) {
       console.error('加载用户信息失败:', err);
       this.isLoggedIn = false;
@@ -108,11 +113,11 @@ struct Profile {
               .margin({ bottom: 10 })
 
             if (this.isLoggedIn) {
+              // 登录后显示用户名
               Text(this.username)
                 .fontSize(20)
                 .fontWeight(FontWeight.Bold)
                 .margin({ bottom: 10 })
-
               // 退出登录按钮
               Button('退出登录', { type: ButtonType.Capsule })
                 .onClick(async () => {
@@ -124,6 +129,8 @@ struct Profile {
                     await pref.flush();
                     this.isLoggedIn = false;
                     this.username = '';
+                    // 退出后加载模拟数据
+                    this.loadMockData();
                     // Redirect to Login page
                     await router.replaceUrl({ url: 'pages/Login' });
                     prompt.showToast({ message: '已退出登录' });
@@ -135,6 +142,7 @@ struct Profile {
                 .width(120)
                 .height(40)
             } else {
+              // 未登录只显示登录按钮
               Button('点击登录', { type: ButtonType.Capsule })
                 .onClick(() => {
                   router.pushUrl({
@@ -177,22 +185,25 @@ struct Profile {
             .justifyContent(FlexAlign.SpaceBetween)
             .margin({ bottom: 10 })
 
-            ForEach(this.browseHistory, (item) => {
-              Row() {
-                Text(item.name)
-                  .fontSize(16)
-                  .layoutWeight(1)
+            // 仅在有数据时渲染条目
+            if (this.browseHistory.length > 0) {
+              ForEach(this.browseHistory, (item) => {
+                Row() {
+                  Text(item.name)
+                    .fontSize(16)
+                    .layoutWeight(1)
 
-                Text(`浏览量: ${item.views}`)
-                  .fontSize(14)
-                  .fontColor('#666666')
-              }
-              .width('100%')
-              .padding(10)
-              .borderRadius(8)
-              .backgroundColor('#F5F5F5')
-              .margin({ bottom: 8 })
-            })
+                  Text(`浏览量: ${item.views}`)
+                    .fontSize(14)
+                    .fontColor('#666666')
+                }
+                .width('100%')
+                .padding(10)
+                .borderRadius(8)
+                .backgroundColor('#F5F5F5')
+                .margin({ bottom: 8 })
+              })
+            }
           }
           .width('90%')
           .margin({ top: 20 })
@@ -204,35 +215,37 @@ struct Profile {
               .fontWeight(FontWeight.Bold)
               .margin({ bottom: 10 })
 
-            ForEach(this.likedHerbs, (item) => {
-              Column() {
-                Row() {
-                  Text(item.name)
-                    .fontSize(16)
-                    .layoutWeight(1)
+            if (this.likedHerbs.length > 0) {
+              ForEach(this.likedHerbs, (item) => {
+                Column() {
+                  Row() {
+                    Text(item.name)
+                      .fontSize(16)
+                      .layoutWeight(1)
 
-                  Image(item.expanded ? $r("app.media.congbai") :$r("app.media.3") )
-                    .width(20)
-                    .height(20)
+                    Image(item.expanded ? $r("app.media.congbai") :$r("app.media.3") )
+                      .width(20)
+                      .height(20)
+                  }
+                  .width('100%')
+                  .padding(10)
+                  .onClick(() => {
+                    item.expanded = !item.expanded;
+                  })
+
+                  if (item.expanded) {
+                    Text(`点赞时间: ${item.time}`)
+                      .fontSize(14)
+                      .fontColor('#666666')
+                      .margin({ left: 10, bottom: 10 })
+                  }
                 }
                 .width('100%')
-                .padding(10)
-                .onClick(() => {
-                  item.expanded = !item.expanded;
-                })
-
-                if (item.expanded) {
-                  Text(`点赞时间: ${item.time}`)
-                    .fontSize(14)
-                    .fontColor('#666666')
-                    .margin({ left: 10, bottom: 10 })
-                }
-              }
-              .width('100%')
-              .borderRadius(8)
-              .backgroundColor('#F5F5F5')
-              .margin({ bottom: 8 })
-            })
+                .borderRadius(8)
+                .backgroundColor('#F5F5F5')
+                .margin({ bottom: 8 })
+              })
+            }
           }
           .width('90%')
           .margin({ top: 20 })
@@ -244,35 +257,37 @@ struct Profile {
               .fontWeight(FontWeight.Bold)
               .margin({ bottom: 10 })
 
-            ForEach(this.collectedHerbs, (item) => {
-              Column() {
-                Row() {
-                  Text(item.name)
-                    .fontSize(16)
-                    .layoutWeight(1)
+            if (this.collectedHerbs.length > 0) {
+              ForEach(this.collectedHerbs, (item) => {
+                Column() {
+                  Row() {
+                    Text(item.name)
+                      .fontSize(16)
+                      .layoutWeight(1)
 
-                  Image(item.expanded ? 'common/icons/arrow_up.png' : 'common/icons/arrow_down.png')
-                    .width(20)
-                    .height(20)
+                    Image(item.expanded ? 'common/icons/arrow_up.png' : 'common/icons/arrow_down.png')
+                      .width(20)
+                      .height(20)
+                  }
+                  .width('100%')
+                  .padding(10)
+                  .onClick(() => {
+                    item.expanded = !item.expanded;
+                  })
+
+                  if (item.expanded) {
+                    Text(`收藏时间: ${item.time}`)
+                      .fontSize(14)
+                      .fontColor('#666666')
+                      .margin({ left: 10, bottom: 10 })
+                  }
                 }
                 .width('100%')
-                .padding(10)
-                .onClick(() => {
-                  item.expanded = !item.expanded;
-                })
-
-                if (item.expanded) {
-                  Text(`收藏时间: ${item.time}`)
-                    .fontSize(14)
-                    .fontColor('#666666')
-                    .margin({ left: 10, bottom: 10 })
-                }
-              }
-              .width('100%')
-              .borderRadius(8)
-              .backgroundColor('#F5F5F5')
-              .margin({ bottom: 8 })
-            })
+                .borderRadius(8)
+                .backgroundColor('#F5F5F5')
+                .margin({ bottom: 8 })
+              })
+            }
           }
           .width('90%')
           .margin({ top: 20 })
@@ -284,33 +299,35 @@ struct Profile {
               .fontWeight(FontWeight.Bold)
               .margin({ bottom: 10 })
 
-            ForEach(this.commentedHerbs, (item) => {
-              Column() {
-                Row() {
-                  Text(item.name)
-                    .fontSize(16)
-                    .layoutWeight(1)
+            if (this.commentedHerbs.length > 0) {
+              ForEach(this.commentedHerbs, (item) => {
+                Column() {
+                  Row() {
+                    Text(item.name)
+                      .fontSize(16)
+                      .layoutWeight(1)
+                  }
+                  .width('100%')
+                  .padding(10)
+                  .onClick(() => {
+                    prompt.showDialog({
+                      title: `评论内容 (${item.name})`,
+                      message: `${item.content}\n\n评论时间: ${item.time}`,
+                      buttons: [
+                        {
+                          text: '确定',
+                          color: '#000000'
+                        }
+                      ]
+                    });
+                  })
                 }
                 .width('100%')
-                .padding(10)
-                .onClick(() => {
-                  prompt.showDialog({
-                    title: `评论内容 (${item.name})`,
-                    message: `${item.content}\n\n评论时间: ${item.time}`,
-                    buttons: [
-                      {
-                        text: '确定',
-                        color: '#000000'
-                      }
-                    ]
-                  });
-                })
-              }
-              .width('100%')
-              .borderRadius(8)
-              .backgroundColor('#F5F5F5')
-              .margin({ bottom: 8 })
-            })
+                .borderRadius(8)
+                .backgroundColor('#F5F5F5')
+                .margin({ bottom: 8 })
+              })
+            }
           }
           .width('90%')
           .margin({ top: 20, bottom: 30 })
