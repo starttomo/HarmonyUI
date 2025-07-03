@@ -12,6 +12,9 @@ struct Register {
   @State passwordVisible: boolean = false;
   @State confirmPasswordVisible: boolean = false;
   @State errorMessage: string = '';
+  @State phone: string = '';
+  @State email: string = '';
+  @State gender: number = 0; // 0: 保密, 1: 男, 2: 女
 
   build() {
     Column() {
@@ -46,6 +49,73 @@ struct Register {
               .backgroundColor('#F5F5F5')
               .borderRadius(8)
               .margin({ bottom: 20 })
+          }
+          .width('80%')
+
+          // 手机号输入
+          Column() {
+            Text('手机号')
+              .fontSize(18)
+              .margin({ bottom: 5 })
+            TextInput({
+              text: this.phone,
+              placeholder: '请输入手机号'
+            })
+              .onChange((value: string) => {
+                this.phone = value;
+                this.errorMessage = '';
+              })
+              .type(InputType.Normal)
+              .width('100%')
+              .height(50)
+              .backgroundColor('#F5F5F5')
+              .borderRadius(8)
+              .margin({ bottom: 20 })
+          }
+          .width('80%')
+
+          // 邮箱输入
+          Column() {
+            Text('邮箱')
+              .fontSize(18)
+              .margin({ bottom: 5 })
+            TextInput({
+              text: this.email,
+              placeholder: '请输入邮箱'
+            })
+              .onChange((value: string) => {
+                this.email = value;
+                this.errorMessage = '';
+              })
+              .type(InputType.Normal)
+              .width('100%')
+              .height(50)
+              .backgroundColor('#F5F5F5')
+              .borderRadius(8)
+              .margin({ bottom: 20 })
+          }
+          .width('80%')
+
+          // 性别选择
+          Column() {
+            Text('性别')
+              .fontSize(18)
+              .margin({ bottom: 5 })
+            Row() {
+              Radio({ value: '0', group: 'gender' })
+                .checked(this.gender === 0)
+                .onChange(() => { this.gender = 0 })
+              Text('保密').margin({ right: 10 })
+              Radio({ value: '1', group: 'gender' })
+                .checked(this.gender === 1)
+                .onChange(() => { this.gender = 1 })
+              Text('男').margin({ right: 10 })
+              Radio({ value: '2', group: 'gender' })
+                .checked(this.gender === 2)
+                .onChange(() => { this.gender = 2 })
+              Text('女')
+            }
+            .margin({ bottom: 20 })
           }
           .width('80%')
 
@@ -130,7 +200,7 @@ struct Register {
           // 注册按钮
           Button('注册', { type: ButtonType.Capsule })
             .onClick(async () => {
-              if (!this.username.trim() || !this.password.trim() || !this.confirmPassword.trim()) {
+              if (!this.username.trim() || !this.password.trim() || !this.confirmPassword.trim() || !this.phone.trim() || !this.email.trim()) {
                 this.errorMessage = '请填写完整信息';
                 return;
               }
@@ -142,7 +212,7 @@ struct Register {
 
               try {
                 // 调用注册函数
-                const isRegistered = registerUser(this.username, this.password);
+                const isRegistered = await registerUser(this.username, this.password, this.phone, this.email, this.gender);
                 if (isRegistered) {
                   // 注册成功
                   this.showSuccess = true;

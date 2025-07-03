@@ -4,6 +4,8 @@ const users: { [username: string]: { password: string; token: string | null } } 
   admin: { password: '123456', token: null }
 };
 
+import http from '@ohos.net.http';
+
 // 生成 token
 async function generateToken(): Promise<string> {
   try {
@@ -21,23 +23,59 @@ async function generateToken(): Promise<string> {
 }
 
 // 注册用户
-function registerUser(username: string, password: string): boolean {
-  if (users[username]) {
-    return false; // 用户已存在
-  }
-  users[username] = { password, token: null };
-  return true;
+export function registerUser(username: string, password: string, phone: string, email: string, gender: number): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    let httpRequest = http.createHttp();
+    httpRequest.request(
+      'http://192.168.223.223:8081/api/register',
+      {
+        method: http.RequestMethod.POST,
+        header: { 'Content-Type': 'application/json' },
+        extraData: JSON.stringify({ username, password, phone, email, gender })
+      },
+      (err, data) => {
+        httpRequest.destroy();
+        if (err) {
+          reject(err);
+        } else {
+          try {
+            const res = JSON.parse(data.result.toString());
+            resolve(res.success === true);
+          } catch (e) {
+            reject(e);
+          }
+        }
+      }
+    );
+  });
 }
 
 // 用户登录
-async function loginUser(username: string, password: string): Promise<string | null> {
-  const user = users[username];
-  if (user && user.password === password) {
-    const token = await generateToken();
-    user.token = token;
-    return token;
-  }
-  return null;
+export function loginUser(username: string, password: string): Promise<string | null> {
+  return new Promise((resolve, reject) => {
+    let httpRequest = http.createHttp();
+    httpRequest.request(
+      'http://192.168.223.223:8081/api/login',
+      {
+        method: http.RequestMethod.POST,
+        header: { 'Content-Type': 'application/json' },
+        extraData: JSON.stringify({ username, password })
+      },
+      (err, data) => {
+        httpRequest.destroy();
+        if (err) {
+          reject(err);
+        } else {
+          try {
+            const res = JSON.parse(data.result.toString());
+            resolve(res.token || null);
+          } catch (e) {
+            reject(e);
+          }
+        }
+      }
+    );
+  });
 }
 
 // 验证 token
@@ -46,4 +84,4 @@ function verifyToken(username: string, token: string): boolean {
   return user && user.token === token;
 }
 
-export { registerUser, loginUser, verifyToken };
+export { verifyToken };

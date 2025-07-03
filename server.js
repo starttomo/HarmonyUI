@@ -15,6 +15,21 @@ const db = mysql.createConnection({
     database: 'ruoyi_db'
 });
 
+// 登录接口
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ error: '用户名和密码不能为空' });
+    }
+    db.query('SELECT * FROM user_info WHERE username = ? AND password = ?', [username, password], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results.length === 0) {
+            return res.status(401).json({ error: '用户名或密码错误' });
+        }
+        // 登录成功，返回 token 或用户信息
+        res.json({ token: 'mock-token', user: results[0] });
+    });
+});
 // 获取所有中药材列表（简要信息）
 app.get('/api/herbs', (req, res) => {
     const { search = '', category = '' } = req.query;
@@ -90,6 +105,29 @@ app.get('/api/herbs/banner', (req, res) => {
     db.query('SELECT herb_id, herb_name, image_url FROM herb_info WHERE image_url IS NOT NULL AND image_url != "" ORDER BY views DESC, herb_id ASC LIMIT 5', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results);
+    });
+});
+
+// 注册接口
+app.post('/api/register', (req, res) => {
+    const { username, password, phone, email, gender } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ error: '用户名和密码不能为空' });
+    }
+    db.query('SELECT * FROM user_info WHERE username = ?', [username], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results.length > 0) {
+            return res.status(409).json({ error: '用户已存在' });
+        }
+        const now = new Date();
+        db.query(
+            'INSERT INTO user_info (username, password, phone, email, gender, status, createTime, updateTime) VALUES (?, ?, ?, ?, ?, 1, ?, ?)',
+            [username, password, phone, email, gender, now, now],
+            (err2, result) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                res.json({ success: true });
+            }
+        );
     });
 });
 
