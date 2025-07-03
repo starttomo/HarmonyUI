@@ -4,6 +4,7 @@ import { CommonConstants } from '../constants/CommonConstants';
 import { BackendService } from '../services/BackendService';
 import media from '@ohos.multimedia.media';
 import { BottomTabs } from '../components/BottomTabs';
+import preferences from '@ohos.data.preferences';
 
 // 类别数据
 const CATEGORIES = [
@@ -24,16 +25,26 @@ struct HomePage {
   @State hasMore: boolean = true;
   @State searchText: string = '';
   @State selectedCategory: string = 'all';
+  @State userId: number = 0;
 
   aboutToAppear() {
-    this.fetchData();
+    this.initPage();
+  }
+
+  onPageShow() {
+    this.initPage();
+  }
+
+  private async initPage() {
+    await this.loadUserId();
+    await this.fetchData();
   }
 
   private async fetchData() {
     this.isLoading = true;
     try {
       console.log(`正在请求分类: ${this.selectedCategory}`); // 打印当前请求的分类
-      const data = await BackendService.fetchHerbList(this.searchText, this.selectedCategory);
+      const data = await BackendService.fetchHerbList(this.searchText, this.selectedCategory, this.userId);
       this.contentList = data;
       this.filteredList = data;
       this.hasMore = data.length >= 100;
@@ -53,19 +64,60 @@ struct HomePage {
     this.fetchData();
   }
 
-  private navigateToDetail(id: number) {
+  private async loadUserId() {
+    try {
+      const context = getContext(this);
+      const pref = await preferences.getPreferences(context, 'user_token');
+      const userIdValue = await pref.get('user_id', 0);
+      this.userId = Number(userIdValue);
+    } catch (e) {
+      this.userId = 0;
+    }
+  }
+
+  private async toggleLike(item: any) {
+    if (!this.userId) {
+      prompt.showToast({ message: '请先登录' });
+      return;
+    }
+    try {
+      await BackendService.toggleLike(item.herb_id, !item.liked, this.userId);
+      item.liked = !item.liked;
+      prompt.showToast({ message: item.liked ? '点赞成功' : '取消点赞' });
+      this.fetchData(); // 刷新数据，确保点赞量同步
+    } catch (e) {
+      prompt.showToast({ message: '操作失败' });
+    }
+  }
+
+  private async toggleCollect(item: any) {
+    if (!this.userId) {
+      prompt.showToast({ message: '请先登录' });
+      return;
+    }
+    try {
+      await BackendService.toggleCollect(item.herb_id, !item.collected, this.userId);
+      item.collected = !item.collected;
+      prompt.showToast({ message: item.collected ? '收藏成功' : '取消收藏' });
+      this.fetchData(); // 刷新数据，确保收藏量同步
+    } catch (e) {
+      prompt.showToast({ message: '操作失败' });
+    }
+  }
+
+  private async navigateToDetail(id: number) {
+    if (this.userId) {
+      try {
+        await BackendService.addView(id, this.userId);
+        this.fetchData(); // 浏览量+1后刷新数据
+      } catch (e) {
+        // 忽略错误
+      }
+    }
     router.pushUrl({
       url: 'pages/DetailPage',
       params: { contentId: id },
     });
-  }
-
-  private toggleLike(item: any) {
-    prompt.showToast({ message: '点赞功能暂未实现' });
-  }
-
-  private toggleCollect(item: any) {
-    prompt.showToast({ message: '收藏功能暂未实现' });
   }
 
   build() {
@@ -174,30 +226,25 @@ struct HomePage {
                   .justifyContent(FlexAlign.Start)
 
                   Row() {
-                    Row() {
-                      Button(item.liked ? '取消' : '点赞', { type: ButtonType.Capsule })
-                        .fontSize(10)
-                        .height(20)
-                        .width(40)
-                        .backgroundColor(item.liked ? '#FF9999' : '#007AFF')
-                        .onClick(() => this.toggleLike(item))
-                      Text(`点赞量`)
-                        .fontSize(10)
-                        .margin({ left: 4 })
+                    Button({ type: ButtonType.Capsule }) {
+                      Text(item.liked ? '取消点赞' : '点赞')
+                        .fontSize(14)
+                        .fontWeight(FontWeight.Medium)
                     }
-                    .margin({ right: 8 })
+                    .height(28)
+                    .width(60)
+                    .backgroundColor(item.liked ? '#FF9999' : '#007AFF')
+                    .onClick(() => this.toggleLike(item))
 
-                    Row() {
-                      Button(item.collected ? '取消' : '收藏', { type: ButtonType.Capsule })
-                        .fontSize(10)
-                        .height(20)
-                        .width(40)
-                        .backgroundColor(item.collected ? '#FF9999' : '#007AFF')
-                        .onClick(() => this.toggleCollect(item))
-                      Text(`收藏量`)
-                        .fontSize(10)
-                        .margin({ left: 4 })
+                    Button({ type: ButtonType.Capsule }) {
+                      Text(item.collected ? '取消收藏' : '收藏')
+                        .fontSize(14)
+                        .fontWeight(FontWeight.Medium)
                     }
+                    .height(28)
+                    .width(60)
+                    .backgroundColor(item.collected ? '#FF9999' : '#007AFF')
+                    .onClick(() => this.toggleCollect(item))
                   }
                   .width('100%')
                   .height(30)

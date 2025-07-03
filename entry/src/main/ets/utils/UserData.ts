@@ -51,7 +51,7 @@ export function registerUser(username: string, password: string, phone: string, 
 }
 
 // 用户登录
-export function loginUser(username: string, password: string): Promise<string | null> {
+export function loginUser(username: string, password: string): Promise<any> {
   return new Promise((resolve, reject) => {
     let httpRequest = http.createHttp();
     httpRequest.request(
@@ -68,7 +68,7 @@ export function loginUser(username: string, password: string): Promise<string | 
         } else {
           try {
             const res = JSON.parse(data.result.toString());
-            resolve(res.token || null);
+            resolve(res); // 返回完整响应
           } catch (e) {
             reject(e);
           }

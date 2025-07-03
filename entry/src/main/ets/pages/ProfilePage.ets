@@ -5,11 +5,13 @@ import preferences from '@ohos.data.preferences';
 import { verifyToken } from '../utils/UserData';
 import { BottomTabs } from '../components/BottomTabs';
 import image from '@ohos.multimedia.image';
+import {BackendService} from '../services/BackendService';
 @Entry
 @Component
 struct Profile {
   @State isLoggedIn: boolean = false;
   @State username: string = '';
+  @State userId: number = 0;
   //@State avatar: string = '../imgs/user.png';
   @State browseHistory: Array<{
     id: number,
@@ -41,27 +43,27 @@ struct Profile {
 
   async aboutToAppear() {
     try {
-      // Load token and username from preferences
+      // Load token, username, userId from preferences
       const context = getContext(this);
       const pref = await preferences.getPreferences(context, 'user_token');
       const tokenValue = await pref.get('token', '');
       const usernameValue = await pref.get('username', '');
+      const userIdValue = await pref.get('user_id', 0);
 
-      // Ensure token and username are strings
       const token = typeof tokenValue === 'string' ? tokenValue : '';
       const storedUsername = typeof usernameValue === 'string' ? usernameValue : '';
+     const storedUserId = Number(userIdValue);
 
-      if (token && storedUsername) {
+      if (token && storedUsername && storedUserId > 0) {
         this.username = storedUsername;
         this.isLoggedIn = true;
-        // 登录成功后清空数据
-        this.browseHistory = [];
-        this.likedHerbs = [];
-        this.collectedHerbs = [];
-        this.commentedHerbs = [];
+        this.userId = storedUserId;
+        // 登录后加载真实数据
+        await this.loadUserData();
       } else {
         this.isLoggedIn = false;
         this.username = '';
+        this.userId = 0;
         // 未登录时加载模拟数据
         this.loadMockData();
       }
@@ -73,6 +75,30 @@ struct Profile {
         await router.replaceUrl({ url: 'pages/Login' });
         prompt.showToast({ message: '加载用户信息失败，请重新登录' });
       }
+    }
+  }
+
+  async loadUserData() {
+    // 加载用户历史、点赞、收藏、评论
+    try {
+      this.browseHistory = await BackendService.fetchUserHistory(this.userId);
+    } catch (e) {
+      this.browseHistory = [];
+    }
+    try {
+      this.likedHerbs = await BackendService.fetchUserLikes(this.userId);
+    } catch (e) {
+      this.likedHerbs = [];
+    }
+    try {
+      this.collectedHerbs = await BackendService.fetchUserCollections(this.userId);
+    } catch (e) {
+      this.collectedHerbs = [];
+    }
+    try {
+      this.commentedHerbs = await BackendService.fetchUserComments(this.userId);
+    } catch (e) {
+      this.commentedHerbs = [];
     }
   }
 
@@ -129,6 +155,7 @@ struct Profile {
                     await pref.flush();
                     this.isLoggedIn = false;
                     this.username = '';
+                    this.userId = 0;
                     // 退出后加载模拟数据
                     this.loadMockData();
                     // Redirect to Login page

@@ -32,7 +32,7 @@ app.post('/api/login', (req, res) => {
 });
 // 获取所有中药材列表（简要信息）
 app.get('/api/herbs', (req, res) => {
-    const { search = '', category = '' } = req.query;
+    const { search = '', category = '', user_id = 0 } = req.query;
     let sql = `SELECT h.herb_id, h.herb_name, h.category_id, c.category_name, h.image_url, h.views, h.likes, h.collections, h.indications
                FROM herb_info h
                LEFT JOIN herb_category c ON h.category_id = c.category_id`;
@@ -52,7 +52,29 @@ app.get('/api/herbs', (req, res) => {
     sql += ' ORDER BY h.sort ASC, h.herb_id ASC LIMIT 100';
     db.query(sql, params, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(results);
+        if (!user_id || user_id == 0) {
+            return res.json(results);
+        }
+        const herbIds = results.map(r => r.herb_id);
+        if (herbIds.length === 0) return res.json(results);
+        // 修正IN查询参数展开
+        const inSql = `SELECT target_id, action_type FROM user_interaction WHERE user_id = ? AND target_type = ? AND target_id IN (${herbIds.map(() => '?').join(',')})`;
+        db.query(
+            inSql,
+            [user_id, 'herb', ...herbIds],
+            (err2, userActs) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                results.forEach(item => {
+                    item.liked = false;
+                    item.collected = false;
+                    userActs.forEach(act => {
+                        if (act.target_id === item.herb_id && act.action_type === 'like') item.liked = true;
+                        if (act.target_id === item.herb_id && act.action_type === 'collect') item.collected = true;
+                    });
+                });
+                res.json(results);
+            }
+        );
     });
 });
 
@@ -66,29 +88,81 @@ app.get('/api/herbs/:id', (req, res) => {
     });
 });
 
-// 点赞/取消点赞
+// 点赞/取消点赞（带user_id）
 app.post('/api/herbs/:id/like', (req, res) => {
     const herbId = req.params.id;
-    const { like } = req.body; // true=点赞，false=取消
-    const sql = like
+    const { user_id, like } = req.body;
+    if (!user_id) return res.status(400).json({ error: '缺少user_id' });
+
+    const updateHerbSql = like
         ? 'UPDATE herb_info SET likes = likes + 1 WHERE herb_id = ?'
         : 'UPDATE herb_info SET likes = IF(likes > 0, likes - 1, 0) WHERE herb_id = ?';
-    db.query(sql, [herbId], (err, result) => {
+
+    const interactionSql = like
+        ? 'INSERT INTO user_interaction (user_id, target_type, target_id, action_type, create_time) VALUES (?, ?, ?, ?, NOW())'
+        : 'DELETE FROM user_interaction WHERE user_id = ? AND target_type = ? AND target_id = ? AND action_type = ?';
+
+    db.query(updateHerbSql, [herbId], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true });
+        if (like) {
+            db.query(interactionSql, [user_id, 'herb', herbId, 'like'], (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                res.json({ success: true });
+            });
+        } else {
+            db.query(interactionSql, [user_id, 'herb', herbId, 'like'], (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                res.json({ success: true });
+            });
+        }
     });
 });
 
-// 收藏/取消收藏
+// 收藏/取消收藏（带user_id）
 app.post('/api/herbs/:id/collect', (req, res) => {
     const herbId = req.params.id;
-    const { collect } = req.body; // true=收藏，false=取消
-    const sql = collect
+    const { user_id, collect } = req.body;
+    if (!user_id) return res.status(400).json({ error: '缺少user_id' });
+
+    const updateHerbSql = collect
         ? 'UPDATE herb_info SET collections = collections + 1 WHERE herb_id = ?'
         : 'UPDATE herb_info SET collections = IF(collections > 0, collections - 1, 0) WHERE herb_id = ?';
-    db.query(sql, [herbId], (err, result) => {
+
+    const interactionSql = collect
+        ? 'INSERT INTO user_interaction (user_id, target_type, target_id, action_type, create_time) VALUES (?, ?, ?, ?, NOW())'
+        : 'DELETE FROM user_interaction WHERE user_id = ? AND target_type = ? AND target_id = ? AND action_type = ?';
+
+    db.query(updateHerbSql, [herbId], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true });
+        if (collect) {
+            db.query(interactionSql, [user_id, 'herb', herbId, 'collect'], (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                res.json({ success: true });
+            });
+        } else {
+            db.query(interactionSql, [user_id, 'herb', herbId, 'collect'], (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                res.json({ success: true });
+            });
+        }
+    });
+});
+
+// 浏览量+1（带user_id）
+app.post('/api/herbs/:id/view', (req, res) => {
+    const herbId = req.params.id;
+    const { user_id } = req.body;
+    if (!user_id) return res.status(400).json({ error: '缺少user_id' });
+
+    const updateHerbSql = 'UPDATE herb_info SET views = views + 1 WHERE herb_id = ?';
+    const historySql = 'INSERT INTO user_history (user_id, target_type, target_id, create_time) VALUES (?, ?, ?, NOW())';
+
+    db.query(updateHerbSql, [herbId], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        db.query(historySql, [user_id, 'herb', herbId], (err2) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            res.json({ success: true });
+        });
     });
 });
 

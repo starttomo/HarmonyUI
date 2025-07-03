@@ -11,15 +11,16 @@ struct Login {
   @State isLoading: boolean = false;
   @State errorMessage: string = '';
 
-  // 存储 token 到 Preferences
-  private async setToken(token: string) {
+  // 存储 token、user_id 到 Preferences
+  private async setLoginInfo(token: string, userId: number) {
     try {
       const context = getContext(this); // Ensure context is obtained correctly
       const pref = await preferences.getPreferences(context, 'user_token');
       await pref.put('token', token);
       await pref.put('username', this.username); // Store username for ProfilePage
+      await pref.put('user_id', userId); // 新增
       await pref.flush();
-      console.info('Token 保存成功');
+      console.info('Token 和 user_id 保存成功');
     } catch (err) {
       console.error('Token 保存失败:', err);
       this.errorMessage = '系统错误，请稍后再试';
@@ -156,11 +157,11 @@ struct Login {
 
     try {
       // 调用登录函数
-      const token = await loginUser(this.username, this.password);
+      const res = await loginUser(this.username, this.password);
 
-      if (token) {
-        // 存储 token
-        await this.setToken(token);
+      if (res && res.token && res.user && res.user.user_id) {
+        // 存储 token 和 user_id
+        await this.setLoginInfo(res.token, res.user.user_id);
 
         // 跳转到 ProfilePage 页面
         await router.replaceUrl({ url: 'pages/ProfilePage' });
