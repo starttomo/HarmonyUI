@@ -18,17 +18,21 @@ const db = mysql.createConnection({
 // 获取所有中药材列表（简要信息）
 app.get('/api/herbs', (req, res) => {
     const { search = '', category = '' } = req.query;
-    let sql = `SELECT herb_id, herb_name, category_id, image_url, views, likes, collections FROM herb_info `;
+    let sql = `SELECT h.herb_id, h.herb_name, h.category_id, c.category_name, h.image_url AS image_url, h.views, h.likes, h.collections, h.indications
+               FROM herb_info h
+               LEFT JOIN herb_category c ON h.category_id = c.category_id`;
+
+               
     const params = [];
     if (search) {
-        sql += ' AND herb_name LIKE ?';
+        sql += ' AND h.herb_name LIKE ?';
         params.push(`%${search}%`);
     }
     if (category && category !== 'all') {
-        sql += ' AND category_id = ?';
+        sql += ' AND h.category_id = ?';
         params.push(category);
     }
-    sql += ' ORDER BY sort ASC, herb_id ASC LIMIT 100';
+    sql += ' ORDER BY h.sort ASC, h.herb_id ASC LIMIT 100';
     db.query(sql, params, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results);
@@ -73,5 +77,5 @@ app.post('/api/herbs/:id/collect', (req, res) => {
 // 启动服务
 const PORT = 8081;
 app.listen(PORT,() => {
-    console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`Server running at http://192.168.223.223:${PORT}`);
 });

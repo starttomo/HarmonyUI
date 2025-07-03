@@ -150,7 +150,7 @@ struct HomePage {
           } else {
             ForEach(this.filteredList, (item, index) => {
               Row() {
-                Image(item.image_url)
+                Image(item.image_url || CommonConstants.IMAGE_URL_1)
                   .width(100)
                   .height(100)
                   .objectFit(ImageFit.Cover)
@@ -165,7 +165,7 @@ struct HomePage {
                       .textAlign(TextAlign.Start)
                       .width('100%')
                       .margin({ bottom: 4 })
-                    Text(item.property ? item.property + (item.efficacy ? '，' + item.efficacy : '') : (item.alias || ''))
+                    Text(item.indications || '')
                       .fontSize(12)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
                       .maxLines(2)
