@@ -175,7 +175,13 @@ export class BackendService {
             reject(err);
           } else {
             try {
-              resolve(JSON.parse(data.result.toString()));
+              const arr = JSON.parse(data.result.toString());
+              resolve(arr.map(item => ({
+                herb_id: item.herb_id,
+                herb_name: item.herb_name,
+                image: item.image_url,
+                create_time: item.create_time
+              })));
             } catch (e) {
               reject(e);
             }
@@ -202,7 +208,13 @@ export class BackendService {
             reject(err);
           } else {
             try {
-              resolve(JSON.parse(data.result.toString()));
+              const arr = JSON.parse(data.result.toString());
+              resolve(arr.map(item => ({
+                herb_id: item.herb_id,
+                herb_name: item.herb_name,
+                image: item.image_url,
+                create_time: item.create_time
+              })));
             } catch (e) {
               reject(e);
             }

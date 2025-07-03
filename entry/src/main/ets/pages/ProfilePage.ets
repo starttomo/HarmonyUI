@@ -23,15 +23,15 @@ struct Profile {
   @State likedHerbs: Array<{
     id: number,
     name: string,
-    time: string,
-    expanded: boolean
+    image: string,
+    time: string
   }> = [];
 
   @State collectedHerbs: Array<{
     id: number,
     name: string,
-    time: string,
-    expanded: boolean
+    image: string,
+    time: string
   }> = [];
 
   @State commentedHerbs: Array<{
@@ -42,6 +42,7 @@ struct Profile {
   }> = [];
 
   async aboutToAppear() {
+    console.log('Profile aboutToAppear');
     try {
       // Load token, username, userId from preferences
       const context = getContext(this);
@@ -52,7 +53,8 @@ struct Profile {
 
       const token = typeof tokenValue === 'string' ? tokenValue : '';
       const storedUsername = typeof usernameValue === 'string' ? usernameValue : '';
-     const storedUserId = Number(userIdValue);
+      const storedUserId = Number(userIdValue);
+      console.log('Profile aboutToAppear userId:', storedUserId, 'isLoggedIn:', token && storedUsername && storedUserId > 0);
 
       if (token && storedUsername && storedUserId > 0) {
         this.username = storedUsername;
@@ -79,25 +81,42 @@ struct Profile {
   }
 
   async loadUserData() {
+    console.log('loadUserData start, userId:', this.userId);
     // 加载用户历史、点赞、收藏、评论
     try {
       this.browseHistory = await BackendService.fetchUserHistory(this.userId);
+      console.log('browseHistory:', this.browseHistory);
     } catch (e) {
+      console.log('fetchUserHistory error:', e);
       this.browseHistory = [];
     }
     try {
-      this.likedHerbs = await BackendService.fetchUserLikes(this.userId);
+      const likes = await BackendService.fetchUserLikes(this.userId);
+      this.likedHerbs = Array.isArray(likes) ? likes.map(item => ({
+        id: item.herb_id,
+        name: item.herb_name,
+        image: item.image,
+        time: item.create_time
+      })) : [];
     } catch (e) {
       this.likedHerbs = [];
     }
     try {
-      this.collectedHerbs = await BackendService.fetchUserCollections(this.userId);
+      const collects = await BackendService.fetchUserCollections(this.userId);
+      this.collectedHerbs = Array.isArray(collects) ? collects.map(item => ({
+        id: item.herb_id,
+        name: item.herb_name,
+        image: item.image,
+        time: item.create_time
+      })) : [];
     } catch (e) {
       this.collectedHerbs = [];
     }
     try {
       this.commentedHerbs = await BackendService.fetchUserComments(this.userId);
+      console.log('commentedHerbs:', this.commentedHerbs);
     } catch (e) {
+      console.log('fetchUserComments error:', e);
       this.commentedHerbs = [];
     }
   }
@@ -110,19 +129,26 @@ struct Profile {
     ];
 
     this.likedHerbs = [
-      { id: 1, name: '当归', time: '2023-10-15 14:32', expanded: false },
-      { id: 2, name: '黄芪', time: '2023-10-14 09:17', expanded: false }
+      { id: 1, name: '当归', image: '/resources/base/media/congbai.jpg', time: '2023-10-15 14:32' },
+      { id: 2, name: '黄芪', image: '/resources/base/media/3.jpg', time: '2023-10-14 09:17' }
     ];
 
     this.collectedHerbs = [
-      { id: 1, name: '当归', time: '2023-10-15 14:35', expanded: false },
-      { id: 3, name: '人参', time: '2023-10-12 16:50', expanded: false }
+      { id: 1, name: '当归', image: '/resources/base/media/congbai.jpg', time: '2023-10-15 14:35' },
+      { id: 3, name: '人参', image: '/resources/base/media/3.jpg', time: '2023-10-12 16:50' }
     ];
 
     this.commentedHerbs = [
       { id: 1, name: '当归', content: '这个中药效果很好，推荐使用！', time: '2023-10-15 14:40' },
       { id: 2, name: '黄芪', content: '补气效果不错，但味道有点苦', time: '2023-10-14 09:20' }
     ];
+  }
+
+  onPageShow() {
+    console.log('Profile onPageShow', 'isLoggedIn:', this.isLoggedIn, 'userId:', this.userId);
+    if (this.isLoggedIn && this.userId > 0) {
+      this.loadUserData();
+    }
   }
 
   build() {
@@ -244,34 +270,28 @@ struct Profile {
 
             if (this.likedHerbs.length > 0) {
               ForEach(this.likedHerbs, (item) => {
-                Column() {
-                  Row() {
-                    Text(item.name)
-                      .fontSize(16)
-                      .layoutWeight(1)
-
-                    Image(item.expanded ? $r("app.media.congbai") :$r("app.media.3") )
-                      .width(20)
-                      .height(20)
-                  }
-                  .width('100%')
-                  .padding(10)
-                  .onClick(() => {
-                    item.expanded = !item.expanded;
-                  })
-
-                  if (item.expanded) {
-                    Text(`点赞时间: ${item.time}`)
-                      .fontSize(14)
-                      .fontColor('#666666')
-                      .margin({ left: 10, bottom: 10 })
-                  }
+                Row() {
+                  Text(item.name)
+                    .fontSize(16)
+                    .layoutWeight(1)
+                  Image(item.image)
+                    .width(32)
+                    .height(32)
+                    .borderRadius(8)
                 }
                 .width('100%')
+                .padding(10)
                 .borderRadius(8)
                 .backgroundColor('#F5F5F5')
                 .margin({ bottom: 8 })
-              })
+                .onClick(() => {
+                  prompt.showDialog({
+                    title: `点赞信息 (${item.name})`,
+                    message: `药材名称: ${item.name}\n点赞时间: ${item.time}`,
+                    buttons: [{ text: '确定', color: '#000000' }]
+                  });
+                })
+              }, item => item.id)
             }
           }
           .width('90%')
@@ -286,34 +306,28 @@ struct Profile {
 
             if (this.collectedHerbs.length > 0) {
               ForEach(this.collectedHerbs, (item) => {
-                Column() {
-                  Row() {
-                    Text(item.name)
-                      .fontSize(16)
-                      .layoutWeight(1)
-
-                    Image(item.expanded ? 'common/icons/arrow_up.png' : 'common/icons/arrow_down.png')
-                      .width(20)
-                      .height(20)
-                  }
-                  .width('100%')
-                  .padding(10)
-                  .onClick(() => {
-                    item.expanded = !item.expanded;
-                  })
-
-                  if (item.expanded) {
-                    Text(`收藏时间: ${item.time}`)
-                      .fontSize(14)
-                      .fontColor('#666666')
-                      .margin({ left: 10, bottom: 10 })
-                  }
+                Row() {
+                  Text(item.name)
+                    .fontSize(16)
+                    .layoutWeight(1)
+                  Image(item.image)
+                    .width(32)
+                    .height(32)
+                    .borderRadius(8)
                 }
                 .width('100%')
+                .padding(10)
                 .borderRadius(8)
                 .backgroundColor('#F5F5F5')
                 .margin({ bottom: 8 })
-              })
+                .onClick(() => {
+                  prompt.showDialog({
+                    title: `收藏信息 (${item.name})`,
+                    message: `药材名称: ${item.name}\n收藏时间: ${item.time}`,
+                    buttons: [{ text: '确定', color: '#000000' }]
+                  });
+                })
+              }, item => item.id)
             }
           }
           .width('90%')

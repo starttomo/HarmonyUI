@@ -205,16 +205,40 @@ app.post('/api/register', (req, res) => {
     });
 });
 
+// 获取用户点赞的中药
+app.get('/api/user/:userId/likes', (req, res) => {
+    const userId = req.params.userId;
+    const sql = `
+      SELECT h.herb_id, h.herb_name, h.image_url, i.create_time
+      FROM user_interaction i
+      JOIN herb_info h ON i.target_id = h.herb_id
+      WHERE i.user_id = ? AND i.target_type = 'herb' AND i.action_type = 'like'
+      ORDER BY i.create_time DESC
+    `;
+    db.query(sql, [userId], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+// 获取用户收藏的中药
+app.get('/api/user/:userId/collections', (req, res) => {
+    const userId = req.params.userId;
+    const sql = `
+      SELECT h.herb_id, h.herb_name, h.image_url, i.create_time
+      FROM user_interaction i
+      JOIN herb_info h ON i.target_id = h.herb_id
+      WHERE i.user_id = ? AND i.target_type = 'herb' AND i.action_type = 'collect'
+      ORDER BY i.create_time DESC
+    `;
+    db.query(sql, [userId], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
 // 启动服务
 const PORT = 8081;
 app.listen(PORT,() => {
     console.log(`Server running at http://192.168.223.223:${PORT}`);
 });
-
-const CATEGORIES = [
-    { name: '全部', value: 'all' },
-    { name: '解表药', value: 1 },
-    { name: '清热药', value: 2 },
-    { name: '祛风湿药', value: 3 },
-    { name: '补虚药', value: 4 },
-];

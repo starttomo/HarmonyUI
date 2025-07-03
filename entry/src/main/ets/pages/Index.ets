@@ -29,6 +29,7 @@ struct HomePage {
 
   aboutToAppear() {
     this.initPage();
+    console.log('HomePage called');
   }
 
   onPageShow() {
@@ -121,6 +122,7 @@ struct HomePage {
   }
 
   build() {
+
     Column() {
       // 搜索栏
       Row() {
