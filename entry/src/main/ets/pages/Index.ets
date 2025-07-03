@@ -8,18 +8,10 @@ import { BottomTabs } from '../components/BottomTabs';
 // 类别数据
 const CATEGORIES = [
   { name: '全部', value: 'all' },
-  { name: '根茎类', value: '根茎类' },
-  { name: '果实类', value: '果实类' },
-  { name: '花类', value: '花类' },
-  { name: '叶类', value: '叶类' },
-];
-
-// 底部导航栏数据
-const NAV_ITEMS = [
-  { name: '首页', icon: CommonConstants.HOME_ICON, route: 'pages/HomePage' },
-  { name: '视频', icon: CommonConstants.VIDEO_ICON, route: 'pages/VideoPage' },
-  { name: '每日一学', icon: CommonConstants.STUDY_ICON, route: 'pages/StudyPage' },
-  { name: '我的', icon: CommonConstants.PROFILE_ICON, route: 'pages/ProfilePage' },
+  { name: '解表药', value: '解表药' },
+  { name: '清热药', value: '清热药' },
+  { name: '祛风湿药', value: '祛风湿药' },
+  { name: '补虚药', value: '补虚药' },
 ];
 
 @Entry
@@ -40,6 +32,7 @@ struct HomePage {
   private async fetchData() {
     this.isLoading = true;
     try {
+      console.log(`正在请求分类: ${this.selectedCategory}`); // 打印当前请求的分类
       const data = await BackendService.fetchHerbList(this.searchText, this.selectedCategory);
       this.contentList = data;
       this.filteredList = data;
@@ -150,7 +143,7 @@ struct HomePage {
           } else {
             ForEach(this.filteredList, (item, index) => {
               Row() {
-                Image(item.image_url || CommonConstants.IMAGE_URL_1)
+                Image(item.image_url)
                   .width(100)
                   .height(100)
                   .objectFit(ImageFit.Cover)

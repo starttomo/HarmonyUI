@@ -18,19 +18,21 @@ const db = mysql.createConnection({
 // 获取所有中药材列表（简要信息）
 app.get('/api/herbs', (req, res) => {
     const { search = '', category = '' } = req.query;
-    let sql = `SELECT h.herb_id, h.herb_name, h.category_id, c.category_name, h.image_url AS image_url, h.views, h.likes, h.collections, h.indications
+    let sql = `SELECT h.herb_id, h.herb_name, h.category_id, c.category_name, h.image_url, h.views, h.likes, h.collections, h.indications
                FROM herb_info h
                LEFT JOIN herb_category c ON h.category_id = c.category_id`;
-
-               
     const params = [];
+    let whereArr = [];
     if (search) {
-        sql += ' AND h.herb_name LIKE ?';
+        whereArr.push('h.herb_name LIKE ?');
         params.push(`%${search}%`);
     }
     if (category && category !== 'all') {
-        sql += ' AND h.category_id = ?';
+        whereArr.push('c.category_name = ?');
         params.push(category);
+    }
+    if (whereArr.length > 0) {
+        sql += ' WHERE ' + whereArr.join(' AND ');
     }
     sql += ' ORDER BY h.sort ASC, h.herb_id ASC LIMIT 100';
     db.query(sql, params, (err, results) => {
@@ -74,8 +76,33 @@ app.post('/api/herbs/:id/collect', (req, res) => {
         res.json({ success: true });
     });
 });
+
+// 获取所有分类
+app.get('/api/categories', (req, res) => {
+    db.query('SELECT category_id, category_name FROM herb_category WHERE status="1" ORDER BY sort ASC, category_id ASC', (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+// 获取首页横幅药材（5条图片不为空的）
+app.get('/api/herbs/banner', (req, res) => {
+    db.query('SELECT herb_id, herb_name, image_url FROM herb_info WHERE image_url IS NOT NULL AND image_url != "" ORDER BY views DESC, herb_id ASC LIMIT 5', (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
 // 启动服务
 const PORT = 8081;
 app.listen(PORT,() => {
     console.log(`Server running at http://192.168.223.223:${PORT}`);
 });
+
+const CATEGORIES = [
+    { name: '全部', value: 'all' },
+    { name: '解表药', value: 1 },
+    { name: '清热药', value: 2 },
+    { name: '祛风湿药', value: 3 },
+    { name: '补虚药', value: 4 },
+];
