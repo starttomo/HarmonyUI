@@ -1,8 +1,50 @@
 import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
 import { CommonConstants } from '../constants/CommonConstants';
-import { VIDEO_LIST } from '../pages/VideoPage'; // 导入 VIDEO_LIST
 import { BottomTabs } from '../components/BottomTabs';
+
+// 默认视频数据（用于StudyPage）
+const DEFAULT_STUDY_VIDEOS = [
+  {
+    video_id: 1,
+    title: '人参药效视频',
+    description: '了解人参的药效与使用方法',
+    video_url: $rawfile('videox.mp4'),
+    cover_image: CommonConstants.IMAGE_URL_1,
+    thumbnail: CommonConstants.IMAGE_URL_1,
+    likes: 120,
+    comments: [],
+    views: 1000,
+    liked: false,
+    collected: false,
+  },
+  {
+    video_id: 2,
+    title: '枸杞养生视频',
+    description: '枸杞的养生功效与食用技巧',
+    video_url: $rawfile('videox.mp4'),
+    cover_image: CommonConstants.IMAGE_URL_2,
+    thumbnail: CommonConstants.IMAGE_URL_2,
+    likes: 80,
+    comments: [],
+    views: 800,
+    liked: false,
+    collected: false,
+  },
+  {
+    video_id: 3,
+    title: '当归补血视频',
+    description: '当归的补血作用及注意事项',
+    video_url: $rawfile('videox.mp4'),
+    cover_image: CommonConstants.IMAGE_URL_3,
+    thumbnail: CommonConstants.IMAGE_URL_3,
+    likes: 150,
+    comments: [],
+    views: 1200,
+    liked: false,
+    collected: false,
+  },
+];
 
 // 20条真实中药知识问答
 const KNOWLEDGE_QA = [
@@ -67,10 +109,10 @@ struct DailyLearningPage {
   // 页面加载时随机选择内容
   aboutToAppear() {
     // 随机选择视频、问答和知识
-    const randomVideoIndex = Math.floor(Math.random() * VIDEO_LIST.length);
+    const randomVideoIndex = Math.floor(Math.random() * DEFAULT_STUDY_VIDEOS.length);
     const randomQAIndex = Math.floor(Math.random() * KNOWLEDGE_QA.length);
     const randomKnowledgeIndex = Math.floor(Math.random() * HERBAL_KNOWLEDGE.length);
-    this.selectedVideo = VIDEO_LIST[randomVideoIndex];
+    this.selectedVideo = DEFAULT_STUDY_VIDEOS[randomVideoIndex];
     this.selectedQA = KNOWLEDGE_QA[randomQAIndex];
     this.selectedKnowledge = HERBAL_KNOWLEDGE[randomKnowledgeIndex];
 
@@ -120,11 +162,29 @@ struct DailyLearningPage {
     }
   }
 
-  // 打开评论输入页面
-  private openCommentDialog(itemId: number) {
+  // 本地/网络视频链接校验
+  private validateVideoUrl(videoUrl: string): string | Resource {
+    if (!videoUrl || videoUrl.trim() === '') {
+      return $rawfile('videox.mp4');
+    }
+    if (typeof videoUrl === 'object') {
+      return videoUrl;
+    }
+    if (typeof videoUrl === 'string' && videoUrl.startsWith('$rawfile(')) {
+      // 直接返回本地资源
+      return eval(videoUrl);
+    }
+    if (videoUrl.startsWith('http')) {
+      return videoUrl;
+    }
+    return videoUrl;
+  }
+
+  // 评论按钮跳转，参数统一为 videoId
+  private openCommentDialog(videoId: number) {
     router.pushUrl({
       url: 'pages/CommentInputPage',
-      params: { itemId },
+      params: { videoId },
     }).catch((err) => {
       console.error('评论页面跳转失败:', JSON.stringify(err));
       promptAction.showToast({
@@ -167,12 +227,7 @@ struct DailyLearningPage {
                   .objectFit(ImageFit.Cover)
                   .borderRadius(8)
                   .margin({ right: 10 })
-                  .onClick(() => this.playVideo(this.selectedVideo.videoUrl))
-                  // .animation({
-                  //   opacity: this.animationStart ? 1 : 0,
-                  //   duration: 500,
-                  //   curve: Curve.EaseInOut
-                  // })
+                  .onClick(() => this.playVideo(this.selectedVideo.video_url))
 
                 // 视频内容
                 Column() {
@@ -201,7 +256,7 @@ struct DailyLearningPage {
                     .width(60)
                     .height(30)
                     .backgroundColor('#007AFF')
-                    .onClick(() => this.openCommentDialog(this.selectedVideo.id))
+                    .onClick(() => this.openCommentDialog(this.selectedVideo.video_id))
                   }
                   .width('60%')
                 }
@@ -212,16 +267,15 @@ struct DailyLearningPage {
                 Text(`${this.selectedVideo.likes} 点赞`)
                   .fontSize(12)
                   .margin({ top: 8 })
+                // 评论数
+                Text(`${Array.isArray(this.selectedVideo.comments) ? this.selectedVideo.comments.length : 0} 评论`)
+                  .fontSize(12)
+                  .margin({ top: 8 })
               }
               .width('100%')
               .padding(10)
               .backgroundColor('#F5F5F5')
               .borderRadius(12)
-              // .animation({
-              //   opacity: this.animationStart ? 1 : 0,
-              //   duration: 500,
-              //   curve: Curve.EaseInOut
-              // })
 
               // 视频描述
               Text(this.selectedVideo.description)
@@ -231,8 +285,7 @@ struct DailyLearningPage {
                 .margin({ top: 10, bottom: 10, left: 10 })
                 .fontColor('#666666')
 
-              // 评论区域
-
+              // 评论区域展开/收起
               Column() {
                 Row() {
                   Text(this.commentVisibility ? '隐藏评论' : '显示评论')
@@ -247,7 +300,7 @@ struct DailyLearningPage {
                 if (this.commentVisibility) {
                   Scroll() {
                     Column() {
-                      if (this.selectedVideo.comments.length === 0) {
+                      if (!Array.isArray(this.selectedVideo.comments) || this.selectedVideo.comments.length === 0) {
                         Text('暂无评论')
                           .fontSize(12)
                           .fontColor('#999999')
@@ -255,16 +308,20 @@ struct DailyLearningPage {
                           .textAlign(TextAlign.Center)
                           .padding(5)
                       } else {
-                        ForEach(this.selectedVideo.comments, (comment: string) => {
-                          Text(comment)
-                            .fontSize(12)
-                            .width('100%')
-                            .textAlign(TextAlign.Start)
-                            .padding(5)
-                            .backgroundColor('#E8E8E8')
-                            .borderRadius(4)
-                            .margin({ bottom: 4 })
-                        }, (comment: string) => comment)
+                        ForEach(
+                          this.selectedVideo.comments,
+                          (comment: string, idx: number) => {
+                            Text(comment)
+                              .fontSize(12)
+                              .width('100%')
+                              .textAlign(TextAlign.Start)
+                              .padding(5)
+                              .backgroundColor('#E8E8E8')
+                              .borderRadius(4)
+                              .margin({ bottom: 4 })
+                          },
+                          (comment: string, idx: number) => idx.toString()
+                        )
                       }
                     }
                     .width('100%')

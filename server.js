@@ -237,8 +237,183 @@ app.get('/api/user/:userId/collections', (req, res) => {
     });
 });
 
+// ==================== 视频相关API ====================
+
+// 获取视频列表
+app.get('/api/videos', (req, res) => {
+    const { user_id = 0 } = req.query;
+    const sql = `
+      SELECT video_id, title, description, video_url, cover_image, duration, 
+             category, views, likes, collections, comments, sort, create_time
+      FROM video_info 
+      WHERE status = '0'
+      ORDER BY sort ASC, video_id ASC
+    `;
+    
+    db.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        
+        if (!user_id || user_id == 0) {
+            return res.json(results);
+        }
+        
+        // 获取用户对视频的交互状态
+        const videoIds = results.map(r => r.video_id);
+        if (videoIds.length === 0) return res.json(results);
+        
+        const inSql = `SELECT target_id, action_type FROM user_interaction WHERE user_id = ? AND target_type = ? AND target_id IN (${videoIds.map(() => '?').join(',')})`;
+        db.query(
+            inSql,
+            [user_id, 'video', ...videoIds],
+            (err2, userActs) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                results.forEach(item => {
+                    item.liked = false;
+                    item.collected = false;
+                    userActs.forEach(act => {
+                        if (act.target_id === item.video_id && act.action_type === 'like') item.liked = true;
+                        if (act.target_id === item.video_id && act.action_type === 'collect') item.collected = true;
+                    });
+                });
+                res.json(results);
+            }
+        );
+    });
+});
+
+// 获取单个视频详情
+app.get('/api/videos/:id', (req, res) => {
+    const videoId = req.params.id;
+    const sql = `SELECT * FROM video_info WHERE video_id = ? AND status = '1'`;
+    db.query(sql, [videoId], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results.length === 0) return res.status(404).json({ error: '视频不存在' });
+        res.json(results[0]);
+    });
+});
+
+// 视频点赞/取消点赞
+app.post('/api/videos/:id/like', (req, res) => {
+    const videoId = req.params.id;
+    const { user_id, like } = req.body;
+    if (!user_id) return res.status(400).json({ error: '缺少user_id' });
+
+    const updateVideoSql = like
+        ? 'UPDATE video_info SET likes = likes + 1 WHERE video_id = ?'
+        : 'UPDATE video_info SET likes = IF(likes > 0, likes - 1, 0) WHERE video_id = ?';
+
+    const interactionSql = like
+        ? 'INSERT INTO user_interaction (user_id, target_type, target_id, action_type, create_time) VALUES (?, ?, ?, ?, NOW())'
+        : 'DELETE FROM user_interaction WHERE user_id = ? AND target_type = ? AND target_id = ? AND action_type = ?';
+
+    db.query(updateVideoSql, [videoId], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (like) {
+            db.query(interactionSql, [user_id, 'video', videoId, 'like'], (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                res.json({ success: true });
+            });
+        } else {
+            db.query(interactionSql, [user_id, 'video', videoId, 'like'], (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                res.json({ success: true });
+            });
+        }
+    });
+});
+
+// 视频收藏/取消收藏
+app.post('/api/videos/:id/collect', (req, res) => {
+    const videoId = req.params.id;
+    const { user_id, collect } = req.body;
+    if (!user_id) return res.status(400).json({ error: '缺少user_id' });
+
+    const updateVideoSql = collect
+        ? 'UPDATE video_info SET collections = collections + 1 WHERE video_id = ?'
+        : 'UPDATE video_info SET collections = IF(collections > 0, collections - 1, 0) WHERE video_id = ?';
+
+    const interactionSql = collect
+        ? 'INSERT INTO user_interaction (user_id, target_type, target_id, action_type, create_time) VALUES (?, ?, ?, ?, NOW())'
+        : 'DELETE FROM user_interaction WHERE user_id = ? AND target_type = ? AND target_id = ? AND action_type = ?';
+
+    db.query(updateVideoSql, [videoId], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (collect) {
+            db.query(interactionSql, [user_id, 'video', videoId, 'collect'], (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                res.json({ success: true });
+            });
+        } else {
+            db.query(interactionSql, [user_id, 'video', videoId, 'collect'], (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                res.json({ success: true });
+            });
+        }
+    });
+});
+
+// 视频播放量+1
+app.post('/api/videos/:id/view', (req, res) => {
+    const videoId = req.params.id;
+    const { user_id } = req.body;
+    if (!user_id) return res.status(400).json({ error: '缺少user_id' });
+
+    const updateVideoSql = 'UPDATE video_info SET views = views + 1 WHERE video_id = ?';
+    const historySql = 'INSERT INTO user_history (user_id, target_type, target_id, create_time) VALUES (?, ?, ?, NOW())';
+
+    db.query(updateVideoSql, [videoId], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        db.query(historySql, [user_id, 'video', videoId], (err2) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            res.json({ success: true });
+        });
+    });
+});
+
+// 获取视频评论列表
+app.get('/api/videos/:id/comments', (req, res) => {
+    const videoId = req.params.id;
+    const sql = `
+      SELECT c.comment_id, c.content, c.create_time, u.username
+      FROM user_comment c
+      LEFT JOIN user_info u ON c.user_id = u.user_id
+      WHERE c.target_type = 'video' AND c.target_id = ? AND c.status = '1'
+      ORDER BY c.create_time DESC
+    `;
+    db.query(sql, [videoId], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+// 添加视频评论
+app.post('/api/videos/:id/comment', (req, res) => {
+    const videoId = req.params.id;
+    const { user_id, content } = req.body;
+    if (!user_id || !content) return res.status(400).json({ error: '缺少user_id或content' });
+
+    const commentSql = 'INSERT INTO user_comment (user_id, target_type, target_id, content, status, create_time) VALUES (?, ?, ?, ?, ?, NOW())';
+    const updateVideoSql = 'UPDATE video_info SET comments = comments + 1 WHERE video_id = ?';
+
+    db.query(commentSql, [user_id, 'video', videoId, content, '1'], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        db.query(updateVideoSql, [videoId], (err2) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            res.json({ success: true });
+        });
+    });
+});
+
 // 启动服务
 const PORT = 8081;
 app.listen(PORT,() => {
-    console.log(`Server running at http://192.168.223.223:${PORT}`);
+    console.log(`Server running at http://192.168.212.223:${PORT}`);
+    console.log('Available APIs:');
+    console.log('- GET /api/videos - 获取视频列表');
+    console.log('- GET /api/videos/:id - 获取视频详情');
+    console.log('- POST /api/videos/:id/like - 视频点赞');
+    console.log('- POST /api/videos/:id/collect - 视频收藏');
+    console.log('- POST /api/videos/:id/view - 视频播放量+1');
+    console.log('- GET /api/videos/:id/comments - 获取视频评论');
+    console.log('- POST /api/videos/:id/comment - 添加视频评论');
 });

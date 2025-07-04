@@ -324,4 +324,241 @@ export class BackendService {
     });
   }
 
+  // ==================== 视频相关API ====================
+
+  // 获取视频列表
+  static fetchVideoList(userId: number = 0): Promise<any[]> {
+    console.log('fetchVideoList参数:', userId, new Error().stack);
+    return new Promise((resolve, reject) => {
+      let url = `http://192.168.212.223:8081/api/videos`;
+      if (userId && userId > 0) {
+        url += `?user_id=${userId}`;
+      }
+      console.log(`获取视频列表: ${url}`);
+      let httpRequest = http.createHttp();
+      httpRequest.request(
+        url,
+        {
+          method: http.RequestMethod.GET,
+          header: { 'Content-Type': 'application/json' },
+          connectTimeout: 10000,
+          readTimeout: 10000
+        },
+        (err, data) => {
+          httpRequest.destroy();
+          if (err) {
+            console.error('获取视频列表失败:', err);
+            reject(err);
+          } else {
+            try {
+              console.log('视频列表响应状态码:', data.responseCode);
+              const videos = JSON.parse(data.result.toString());
+              console.log(`获取到 ${videos.length} 个视频`);
+              resolve(videos);
+            } catch (e) {
+              console.error('视频列表JSON解析错误:', e);
+              reject(e);
+            }
+          }
+        }
+      );
+    });
+  }
+
+  // 获取视频详情
+  static fetchVideoDetail(id: number): Promise<any> {
+    return new Promise((resolve, reject) => {
+      let url = `http://192.168.212.223:8081/api/videos/${id}`;
+      console.log(`获取视频详情: ${url}`);
+      let httpRequest = http.createHttp();
+      httpRequest.request(
+        url,
+        {
+          method: http.RequestMethod.GET,
+          header: { 'Content-Type': 'application/json' },
+          connectTimeout: 10000,
+          readTimeout: 10000
+        },
+        (err, data) => {
+          httpRequest.destroy();
+          if (err) {
+            console.error('获取视频详情失败:', err);
+            reject(err);
+          } else {
+            try {
+              resolve(JSON.parse(data.result.toString()));
+            } catch (e) {
+              console.error('视频详情JSON解析错误:', e);
+              reject(e);
+            }
+          }
+        }
+      );
+    });
+  }
+
+  // 视频点赞/取消点赞
+  static toggleVideoLike(id: number, like: boolean, userId: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      let url = `http://192.168.212.223:8081/api/videos/${id}/like`;
+      console.log(`视频点赞操作: ${url}, like: ${like}`);
+      let httpRequest = http.createHttp();
+      httpRequest.request(
+        url,
+        {
+          method: http.RequestMethod.POST,
+          header: { 'Content-Type': 'application/json' },
+          extraData: JSON.stringify({ like, user_id: userId }),
+          connectTimeout: 10000,
+          readTimeout: 10000
+        },
+        (err, data) => {
+          httpRequest.destroy();
+          if (err) {
+            console.error('视频点赞操作失败:', err);
+            reject(err);
+          } else {
+            console.log('视频点赞操作成功');
+            resolve();
+          }
+        }
+      );
+    });
+  }
+
+  // 视频收藏/取消收藏
+  static toggleVideoCollect(id: number, collect: boolean, userId: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      let url = `http://192.168.212.223:8081/api/videos/${id}/collect`;
+      console.log(`视频收藏操作: ${url}, collect: ${collect}`);
+      let httpRequest = http.createHttp();
+      httpRequest.request(
+        url,
+        {
+          method: http.RequestMethod.POST,
+          header: { 'Content-Type': 'application/json' },
+          extraData: JSON.stringify({ collect, user_id: userId }),
+          connectTimeout: 10000,
+          readTimeout: 10000
+        },
+        (err, data) => {
+          httpRequest.destroy();
+          if (err) {
+            console.error('视频收藏操作失败:', err);
+            reject(err);
+          } else {
+            console.log('视频收藏操作成功');
+            resolve();
+          }
+        }
+      );
+    });
+  }
+
+  // 视频播放量+1
+  static addVideoView(id: number, userId: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      let url = `http://192.168.212.223:8081/api/videos/${id}/view`;
+      console.log(`视频播放量+1: ${url}`);
+      let httpRequest = http.createHttp();
+      httpRequest.request(
+        url,
+        {
+          method: http.RequestMethod.POST,
+          header: { 'Content-Type': 'application/json' },
+          extraData: JSON.stringify({ user_id: userId }),
+          connectTimeout: 10000,
+          readTimeout: 10000
+        },
+        (err, data) => {
+          httpRequest.destroy();
+          if (err) {
+            console.error('视频播放量更新失败:', err);
+            reject(err);
+          } else {
+            console.log('视频播放量更新成功');
+            resolve();
+          }
+        }
+      );
+    });
+  }
+
+  // 获取视频评论列表
+  static fetchVideoComments(videoId: number): Promise<any[]> {
+    return new Promise((resolve, reject) => {
+      let url = `http://192.168.212.223:8081/api/videos/${videoId}/comments`;
+      console.log(`获取视频评论: ${url}`);
+      let httpRequest = http.createHttp();
+      httpRequest.request(
+        url,
+        {
+          method: http.RequestMethod.GET,
+          header: { 'Content-Type': 'application/json' },
+          connectTimeout: 10000,
+          readTimeout: 10000
+        },
+        (err, data) => {
+          httpRequest.destroy();
+          if (err) {
+            console.error('获取视频评论失败:', err);
+            reject(err);
+          } else {
+            try {
+              const comments = JSON.parse(data.result.toString());
+              console.log(`获取到 ${comments.length} 条评论`);
+              resolve(comments);
+            } catch (e) {
+              console.error('视频评论JSON解析错误:', e);
+              reject(e);
+            }
+          }
+        }
+      );
+    });
+  }
+
+  // 添加视频评论
+  static addVideoComment(videoId: number, content: string, userId: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      let url = `http://192.168.212.223:8081/api/videos/${videoId}/comment`;
+      console.log(`添加视频评论: ${url}`);
+      let httpRequest = http.createHttp();
+      httpRequest.request(
+        url,
+        {
+          method: http.RequestMethod.POST,
+          header: { 'Content-Type': 'application/json' },
+          extraData: JSON.stringify({ content, user_id: userId }),
+          connectTimeout: 10000,
+          readTimeout: 10000
+        },
+        (err, data) => {
+          httpRequest.destroy();
+          if (err) {
+            console.error('添加视频评论失败:', err);
+            reject(err);
+          } else {
+            console.log('添加视频评论成功');
+            resolve();
+          }
+        }
+      );
+    });
+  }
+
+  // 验证视频URL，如果无效则使用默认视频
+  private validateVideoUrl(videoUrl: string): string | Resource {
+    if (!videoUrl || videoUrl.trim() === '') {
+      return $rawfile('videox.mp4');
+    }
+    // 允许网络视频
+    if (videoUrl.startsWith('http')) {
+      return videoUrl;
+    }
+    // 其他情况
+    return videoUrl;
+  }
+
+
 }
