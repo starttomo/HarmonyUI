@@ -5,25 +5,37 @@ export class BackendService {
 
   static fetchHerbList(searchText: string = '', category: string = 'all', userId: number = 0): Promise<any[]> {
     return new Promise((resolve, reject) => {
-      let url = `http://192.168.223.223:8081/api/herbs?search=${encodeURIComponent(searchText)}&category=${encodeURIComponent(category)}`;
+      // let url = `http://192.168.223.223:8081/api/herbs?search=${encodeURIComponent(searchText)}&category=${encodeURIComponent(category)}`;
+      let url = `http://192.168.212.223:8081/api/herbs?search=${encodeURIComponent(searchText)}&category=${encodeURIComponent(category)}`;
       if (userId && userId > 0) {
         url += `&user_id=${userId}`;
       }
+      console.log(`BackendService: 发起HTTP请求到 ${url}`);
       let httpRequest = http.createHttp();
       httpRequest.request(
         url,
         {
           method: http.RequestMethod.GET,
-          header: { 'Content-Type': 'application/json' }
+          header: { 'Content-Type': 'application/json' },
+          connectTimeout: 10000,  // 10秒连接超时
+          readTimeout: 10000      // 10秒读取超时
         },
         (err, data) => {
           httpRequest.destroy();
           if (err) {
+            console.error('BackendService: HTTP请求错误:', err);
+            console.error('错误代码:', err.code);
+            console.error('错误消息:', err.message);
             reject(err);
           } else {
             try {
+              console.log('BackendService: 收到响应，状态码:', data.responseCode);
+              console.log('BackendService: 响应数据长度:', data.result.toString().length);
+              console.log('BackendService: 响应数据前100字符:', data.result.toString().substring(0, 100));
               resolve(JSON.parse(data.result.toString()));
             } catch (e) {
+              console.error('BackendService: JSON解析错误:', e);
+              console.error('BackendService: 原始响应数据:', data.result.toString());
               reject(e);
             }
           }
@@ -34,7 +46,8 @@ export class BackendService {
 
   static fetchHerbDetail(id: number): Promise<any> {
     return new Promise((resolve, reject) => {
-      let url = `http://192.168.223.223:8081/api/herbs/${id}`;
+      // let url = `http://192.168.223.223:8081/api/herbs/${id}`;
+      let url = `http://192.168.212.223:8081/api/herbs/${id}`;
       let httpRequest = http.createHttp();
       httpRequest.request(
         url,
@@ -60,7 +73,8 @@ export class BackendService {
 
   static toggleLike(id: number, like: boolean, userId: number): Promise<void> {
     return new Promise((resolve, reject) => {
-      let url = `http://192.168.223.223:8081/api/herbs/${id}/like`;
+      // let url = `http://192.168.223.223:8081/api/herbs/${id}/like`;
+      let url = `http://192.168.212.223:8081/api/herbs/${id}/like`;
       let httpRequest = http.createHttp();
       httpRequest.request(
         url,
@@ -83,7 +97,8 @@ export class BackendService {
 
   static toggleCollect(id: number, collect: boolean, userId: number): Promise<void> {
     return new Promise((resolve, reject) => {
-      let url = `http://192.168.223.223:8081/api/herbs/${id}/collect`;
+      // let url = `http://192.168.223.223:8081/api/herbs/${id}/collect`;
+      let url = `http://192.168.212.223:8081/api/herbs/${id}/collect`;
       let httpRequest = http.createHttp();
       httpRequest.request(
         url,
@@ -106,7 +121,8 @@ export class BackendService {
 
   static login(username: string, password: string): Promise<any> {
     return new Promise((resolve, reject) => {
-      let url = 'http://192.168.223.223:8081/api/login';
+      // let url = 'http://192.168.223.223:8081/api/login';
+      let url = 'http://192.168.212.223:8081/api/login';
       let httpRequest = http.createHttp();
       httpRequest.request(
         url,
@@ -134,7 +150,8 @@ export class BackendService {
   // 获取用户浏览历史
   static fetchUserHistory(userId: number): Promise<any[]> {
     return new Promise((resolve, reject) => {
-      let url = `http://192.168.223.223:8081/api/user/${userId}/history`;
+      // let url = `http://192.168.223.223:8081/api/user/${userId}/history`;
+      let url = `http://192.168.212.223:8081/api/user/${userId}/history`;
       let httpRequest = http.createHttp();
       httpRequest.request(
         url,
@@ -161,7 +178,8 @@ export class BackendService {
   // 获取用户点赞的中药
   static fetchUserLikes(userId: number): Promise<any[]> {
     return new Promise((resolve, reject) => {
-      let url = `http://192.168.223.223:8081/api/user/${userId}/likes`;
+      // let url = `http://192.168.223.223:8081/api/user/${userId}/likes`;
+      let url = `http://192.168.212.223:8081/api/user/${userId}/likes`;
       let httpRequest = http.createHttp();
       httpRequest.request(
         url,
@@ -194,7 +212,8 @@ export class BackendService {
   // 获取用户收藏的中药
   static fetchUserCollections(userId: number): Promise<any[]> {
     return new Promise((resolve, reject) => {
-      let url = `http://192.168.223.223:8081/api/user/${userId}/collections`;
+      // let url = `http://192.168.223.223:8081/api/user/${userId}/collections`;
+      let url = `http://192.168.212.223:8081/api/user/${userId}/collections`;
       let httpRequest = http.createHttp();
       httpRequest.request(
         url,
@@ -227,7 +246,8 @@ export class BackendService {
   // 获取用户评论的中药
   static fetchUserComments(userId: number): Promise<any[]> {
     return new Promise((resolve, reject) => {
-      let url = `http://192.168.223.223:8081/api/user/${userId}/comments`;
+      // let url = `http://192.168.223.223:8081/api/user/${userId}/comments`;
+      let url = `http://192.168.212.223:8081/api/user/${userId}/comments`;
       let httpRequest = http.createHttp();
       httpRequest.request(
         url,
@@ -254,7 +274,8 @@ export class BackendService {
   // 浏览量+1
   static addView(id: number, userId: number): Promise<void> {
     return new Promise((resolve, reject) => {
-      let url = `http://192.168.223.223:8081/api/herbs/${id}/view`;
+      // let url = `http://192.168.223.223:8081/api/herbs/${id}/view`;
+      let url = `http://192.168.212.223:8081/api/herbs/${id}/view`;
       let httpRequest = http.createHttp();
       httpRequest.request(
         url,
@@ -269,6 +290,34 @@ export class BackendService {
             reject(err);
           } else {
             resolve();
+          }
+        }
+      );
+    });
+  }
+
+  // 测试网络连接
+  static testConnection(): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      let url = 'http://192.168.212.223:8081/api/herbs';
+      console.log(`测试连接到: ${url}`);
+      let httpRequest = http.createHttp();
+      httpRequest.request(
+        url,
+        {
+          method: http.RequestMethod.GET,
+          header: { 'Content-Type': 'application/json' },
+          connectTimeout: 5000,   // 5秒连接超时
+          readTimeout: 5000       // 5秒读取超时
+        },
+        (err, data) => {
+          httpRequest.destroy();
+          if (err) {
+            console.error('连接测试失败:', err);
+            resolve(false);
+          } else {
+            console.log('连接测试成功，状态码:', data.responseCode);
+            resolve(true);
           }
         }
       );

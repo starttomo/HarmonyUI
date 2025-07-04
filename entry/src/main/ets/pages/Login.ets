@@ -170,7 +170,9 @@ struct Login {
       }
     } catch (err) {
       console.error('登录错误:', err);
-      this.errorMessage = '登录失败，请稍后再试';
+      console.error('错误类型:', typeof err);
+      console.error('错误消息:', err.message || err);
+      this.errorMessage = `登录失败: ${err.message || err}`;
     } finally {
       this.isLoading = false;
     }

@@ -45,12 +45,26 @@ struct HomePage {
     this.isLoading = true;
     try {
       console.log(`正在请求分类: ${this.selectedCategory}`); // 打印当前请求的分类
+      console.log(`请求URL: http://192.168.212.223:8081/api/herbs?search=${encodeURIComponent(this.searchText)}&category=${encodeURIComponent(this.selectedCategory)}`);
+      
+      // 先测试连接
+      const isConnected = await BackendService.testConnection();
+      if (!isConnected) {
+        prompt.showToast({ message: '无法连接到服务器，请检查网络连接' });
+        this.isLoading = false;
+        return;
+      }
+      
       const data = await BackendService.fetchHerbList(this.searchText, this.selectedCategory, this.userId);
+      console.log(`请求成功，数据长度: ${data.length}`);
       this.contentList = data;
       this.filteredList = data;
       this.hasMore = data.length >= 100;
     } catch (e) {
-      prompt.showToast({ message: '数据加载失败' });
+      console.error('数据加载失败，错误详情:', e);
+      console.error('错误类型:', typeof e);
+      console.error('错误消息:', e.message || e);
+      prompt.showToast({ message: `数据加载失败: ${e.message || e}` });
     }
     this.isLoading = false;
   }
